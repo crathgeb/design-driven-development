@@ -1,0 +1,26 @@
+{
+  "name": "design-driven-development",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Rapid UX iteration with Claude: HTML mocks of every screen state on a board you mark up in the browser; background workers revise them; the result is exported as a spec.",
+  "license": "MIT",
+  "author": "TechSnack LLC",
+  "homepage": "https://github.com/crathgeb/design-driven-development",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/crathgeb/design-driven-development.git"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node --test --test-concurrency=1 test/*.test.mjs"
+  },
+  "optionalDependencies": {
+    "playwright-core": "1.64.1"
+  },
+  "bin": {
+    "ddd": "scripts/ddd.mjs"
+  }
+}

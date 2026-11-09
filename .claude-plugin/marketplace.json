@@ -1,0 +1,19 @@
+{
+  "name": "design-driven-development",
+  "description": "Design-driven development: mock it, mark it up, spec it",
+  "owner": {
+    "name": "crathgeb",
+    "url": "https://github.com/crathgeb"
+  },
+  "plugins": [
+    {
+      "name": "design-driven-development",
+      "source": "./",
+      "description": "HTML mocks of every screen state on a board you mark up in the browser; Claude revises them in the background and exports the spec.",
+      "homepage": "https://github.com/crathgeb/design-driven-development",
+      "license": "MIT",
+      "keywords": ["design", "ux", "mocks", "spec"],
+      "category": "design"
+    }
+  ]
+}

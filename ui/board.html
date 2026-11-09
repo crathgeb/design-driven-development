@@ -1,0 +1,176 @@
+<!doctype html>
+<!-- The design-driven-development board: every flow, screen and state of a project as live phone frames.
+     Served by lib/server.mjs at /; export.mjs reuses it, read-only, for the exported spec. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Board · design-driven-development</title>
+  <link rel="stylesheet" href="ui/board.css">
+</head>
+<body>
+  <header class="top">
+    <div class="top-left">
+      <button class="icon-btn" id="side-btn" type="button" title="Show or hide flows and screens ([)" aria-controls="side" aria-expanded="true">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="3" width="12" height="10" rx="2"/><path d="M6 3v10"/></svg>
+      </button>
+      <button class="icon-btn back" id="back" type="button" title="Back to the board (Esc)" hidden>
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 5 8l5 5"/></svg>
+      </button>
+      <div class="crumbs">
+        <span class="project-name" id="project-name">…</span>
+        <span class="crumb-rest" id="crumb-rest"></span>
+      </div>
+      <span class="readonly-tag" id="readonly-tag" hidden>Exported spec</span>
+    </div>
+    <div class="top-right">
+      <span class="pill" id="claude-pill" data-state="offline" title="">
+        <span class="dot"></span><span class="pill-text">Claude offline</span>
+      </span>
+      <div class="pop-wrap live-only">
+        <button class="btn ghost" id="activity-btn" type="button" aria-expanded="false">Activity<span class="count" id="activity-count" hidden></span></button>
+        <div class="pop activity" id="activity" hidden></div>
+      </div>
+      <div class="pop-wrap live-only">
+        <button class="btn ghost" id="export-btn" type="button" aria-expanded="false">Export</button>
+        <div class="pop export" id="export-pop" hidden>
+          <p class="pop-title">Export the spec</p>
+          <p class="muted">When the experience is right, say this to Claude. It writes the spec, the mocks and a read-only board into the product's repo.</p>
+          <div class="say"><code id="export-say">export the spec</code><button class="btn small" id="export-copy" type="button">Copy</button></div>
+          <p class="muted small" id="export-dest"></p>
+        </div>
+      </div>
+      <button class="btn live-only" id="ask-btn" type="button">Ask Claude…</button>
+      <button class="btn primary live-only" id="send-btn" type="button" disabled>Send to Claude<span class="count" id="send-count">0</span></button>
+    </div>
+  </header>
+
+  <nav class="side" id="side" aria-label="Flows and screens">
+    <div class="side-head">
+      <p class="side-project" id="side-project"></p>
+      <p class="side-goal" id="side-goal"></p>
+    </div>
+    <button class="side-app" id="side-app" type="button" aria-controls="app-panel">
+      <span class="side-app-icon"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="5" height="5" rx="1.3"/><rect x="9" y="2" width="5" height="5" rx="1.3"/><rect x="2" y="9" width="5" height="5" rx="1.3"/><rect x="9" y="9" width="5" height="5" rx="1.3"/></svg></span>
+      <span class="side-app-text"><span class="side-app-title">Whole app</span><span class="side-app-sub" id="side-app-sub">Brand, design, wording</span></span>
+      <span class="s-work" id="side-app-work" hidden></span>
+    </button>
+    <div class="side-filter">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/></svg>
+      <input id="side-filter" type="search" placeholder="Find a screen" autocomplete="off" spellcheck="false" aria-label="Find a screen">
+    </div>
+    <div class="side-tree" id="side-tree"></div>
+    <p class="side-none muted small" id="side-none" hidden>No screen matches.</p>
+  </nav>
+
+  <main id="board" class="board" tabindex="-1">
+    <div class="board-inner" id="board-inner"></div>
+    <div class="empty" id="empty" hidden>
+      <p class="empty-title">No screens yet</p>
+      <p class="muted">Claude adds flows, screens and states as it writes the mocks. They appear here as soon as they exist.</p>
+    </div>
+  </main>
+
+  <div class="zoom" id="zoom" role="group" aria-label="Zoom">
+    <button class="icon-btn" id="zoom-out" type="button" title="Zoom out (−)"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8h9"/></svg></button>
+    <input id="zoom-range" type="range" min="0.35" max="1" step="0.05" aria-label="Zoom">
+    <button class="icon-btn" id="zoom-in" type="button" title="Zoom in (+)"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8h9M8 3.5v9"/></svg></button>
+    <span class="zoom-val" id="zoom-val">55%</span>
+  </div>
+
+  <section class="focus" id="focus" hidden>
+    <nav class="rail" id="rail" aria-label="Tools">
+      <button type="button" data-tool="select" title="Select (V)"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 2.5v10l2.8-2.6 1.9 4.1 1.6-.7-1.9-4.1h3.8z" class="fill"/></svg></button>
+      <span class="rail-sep"></span>
+      <button type="button" data-tool="pin" title="Pin (P)"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 14.5s4.5-4.2 4.5-7.6a4.5 4.5 0 0 0-9 0c0 3.4 4.5 7.6 4.5 7.6z"/><circle cx="8" cy="6.9" r="1.5"/></svg></button>
+      <button type="button" data-tool="box" title="Box (B)"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2.5" y="3.5" width="11" height="9" rx="2"/></svg></button>
+      <button type="button" data-tool="ellipse" title="Ellipse (E)"><svg viewBox="0 0 16 16" aria-hidden="true"><ellipse cx="8" cy="8" rx="5.8" ry="4.6"/></svg></button>
+      <button type="button" data-tool="arrow" title="Arrow (A)"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 13 13 3M7 3h6v6"/></svg></button>
+      <button type="button" data-tool="pen" title="Pen (D)"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 12.5c2-3 3.2-.2 5-2.5s1.3-5 3.5-6.5 3 .5 2.5 1.5"/></svg></button>
+      <span class="rail-sep"></span>
+      <button type="button" data-tool="note" title="Note on the whole state (N)"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3h10v7.5H8.5L5.5 13v-2.5H3z"/></svg></button>
+    </nav>
+
+    <div class="stage" id="stage">
+      <div class="stage-head">
+        <div class="stage-title">
+          <span class="stage-state" id="stage-state"></span>
+          <span class="stage-pos muted" id="stage-pos"></span>
+        </div>
+        <div class="stage-tools">
+          <span class="hint muted" id="tool-hint"></span>
+          <button class="btn small ghost" id="fit-btn" type="button" title="Fit to height or show at 100%">100%</button>
+        </div>
+      </div>
+      <div class="stage-body" id="stage-body">
+        <div class="stage-frame" id="stage-frame"></div>
+      </div>
+      <div class="strip" id="strip"></div>
+    </div>
+
+    <aside class="panel" id="panel">
+      <div class="panel-scroll">
+        <section class="p-sec">
+          <p class="label" id="p-flow"></p>
+          <h2 class="p-title" id="p-screen"></h2>
+          <p class="p-intent" id="p-screen-intent"></p>
+        </section>
+        <section class="p-sec">
+          <p class="label">This state <span class="muted" id="p-state-name"></span></p>
+          <p class="p-intent" id="p-state-intent"></p>
+        </section>
+        <section class="p-sec">
+          <p class="label">Your notes</p>
+          <label class="field"><span>On the screen</span><textarea id="n-screen" rows="2" placeholder="Context or intent for the whole screen"></textarea></label>
+          <label class="field"><span>On this state</span><textarea id="n-state" rows="2" placeholder="Anything about this state"></textarea></label>
+        </section>
+        <section class="p-sec">
+          <div class="label-row"><p class="label">Marks <span class="muted" id="marks-count"></span></p><button class="btn small ghost live-only" id="add-note" type="button">+ Note</button></div>
+          <ol class="marks" id="marks"></ol>
+          <p class="muted small marks-empty" id="marks-empty">Pick a tool on the left (P, B, E, A, D) and draw on the mock. Each mark gets a number and a note.</p>
+          <details class="resolved" id="resolved" hidden><summary>Resolved <span id="resolved-count"></span></summary><ol class="marks" id="marks-done"></ol></details>
+        </section>
+      </div>
+      <div class="panel-foot live-only">
+        <button class="btn primary wide" id="send-screen" type="button" disabled>Send this screen to Claude</button>
+      </div>
+    </aside>
+  </section>
+
+  <aside class="drawer" id="app-panel" hidden aria-label="Whole app">
+    <div class="drawer-head">
+      <div>
+        <p class="label">Whole app</p>
+        <h2 class="p-title">Ask Claude</h2>
+      </div>
+      <button class="icon-btn" id="app-close" type="button" title="Close (Esc)" aria-label="Close"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>
+    </div>
+    <div class="drawer-scroll">
+      <section class="p-sec">
+        <p class="label">Design direction</p>
+        <p class="p-help">What every screen should feel like: brand, tone, type, colour. Claude reads it with every request here.</p>
+        <textarea id="n-app" rows="3" placeholder="Warm and calm, like a paper notebook. One accent colour. Big, friendly type."></textarea>
+      </section>
+      <section class="p-sec live-only">
+        <p class="label">New request</p>
+        <form id="ask-form">
+          <textarea id="ask-text" rows="3" placeholder="Make it feel warmer" required></textarea>
+          <label class="field"><span>Applies to</span><select id="ask-scope"></select></label>
+          <p class="p-help" id="ask-hint"></p>
+          <div class="form-actions"><button class="btn primary" type="submit" id="ask-send">Send to Claude</button></div>
+        </form>
+      </section>
+      <section class="p-sec">
+        <p class="label">Requests <span class="muted" id="asks-count"></span></p>
+        <ol class="asks" id="asks-list"></ol>
+        <p class="p-help" id="asks-empty">Nothing asked yet.</p>
+      </section>
+    </div>
+  </aside>
+
+  <div class="toast" id="toast" role="status" hidden></div>
+
+  <script src="ui/board.js"></script>
+</body>
+</html>

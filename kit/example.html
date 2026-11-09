@@ -1,0 +1,242 @@
+<!doctype html>
+<!-- design-driven-development kit gallery: every component of kit/mock.css on one scrolling phone page.
+     It doubles as the kit's visual test: render it at 390 wide, light and dark (?theme=dark). -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=390, initial-scale=1">
+<title>Kit gallery</title>
+<link rel="stylesheet" href="mock.css">
+<script src="mock.js" defer></script>
+<style>
+  .g-section { display: flex; flex-direction: column; gap: var(--s3); }
+  .g-h { font: 700 13px/1 var(--font); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: var(--s5) 4px 0; display: flex; justify-content: space-between; }
+  .g-h code { font: 500 12px var(--mono); letter-spacing: 0; text-transform: none; color: var(--faint); }
+  .g-frame { border: 1px dashed var(--border); border-radius: var(--r-lg); overflow: hidden; position: relative; }
+  .swatches { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s2); }
+  .sw { border-radius: var(--r-md); height: 46px; display: flex; align-items: flex-end; padding: 5px 7px; font: 600 10.5px/1 var(--mono); color: #fff; }
+  .sw.light { color: var(--text); border: 1px solid var(--border); }
+  .icons { display: grid; grid-template-columns: repeat(7, 1fr); gap: var(--s3) var(--s2); color: var(--text); }
+  .icons > span { display: flex; flex-direction: column; align-items: center; gap: 5px; font: 500 9.5px/1 var(--mono); color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="screen">
+  <header class="status-bar">9:41</header>
+  <nav class="nav-bar">
+    <a class="nav-back">Home</a>
+    <span class="nav-title">Kit</span>
+    <a class="nav-action">Edit</a>
+  </nav>
+
+  <main class="content">
+    <h1 class="large-title">Mock kit</h1>
+    <p class="muted">Every component a mock can use. Light and dark follow the system, or <code>?theme=dark</code>.</p>
+
+    <section class="g-section">
+      <h2 class="g-h">Theme <code>--tokens</code></h2>
+      <div class="swatches">
+        <div class="sw light" style="background:var(--bg)">bg</div>
+        <div class="sw light" style="background:var(--surface)">surface</div>
+        <div class="sw light" style="background:var(--surface-2)">surface-2</div>
+        <div class="sw" style="background:var(--text);color:var(--bg)">text</div>
+        <div class="sw" style="background:var(--accent)">accent</div>
+        <div class="sw" style="background:var(--success)">success</div>
+        <div class="sw" style="background:var(--warning)">warning</div>
+        <div class="sw" style="background:var(--danger)">danger</div>
+        <div class="sw" style="background:var(--l1)">l1</div>
+        <div class="sw" style="background:var(--l2)">l2</div>
+        <div class="sw" style="background:var(--l3)">l3</div>
+        <div class="sw" style="background:var(--muted)">muted</div>
+      </div>
+    </section>
+
+    <section class="g-section">
+      <h2 class="g-h">Type</h2>
+      <div class="card">
+        <p class="title">Title, 24</p>
+        <p class="headline">Headline, 17 semibold</p>
+        <p class="prompt">Comment vous appelez-vous ?</p>
+        <p class="big-text">Je m'appelle Léa.</p>
+        <p class="translation">My name is Léa.</p>
+        <p class="body-text">Body text for longer passages, 19.</p>
+        <p class="meta">Meta · Card 3 of 18</p>
+      </div>
+    </section>
+
+    <section class="g-section">
+      <h2 class="g-h">Buttons <code>.btn</code></h2>
+      <button class="btn block">Primary</button>
+      <div class="btn-row"><button class="btn secondary">Secondary</button><button class="btn outline">Outline</button></div>
+      <div class="hstack wrap">
+        <button class="btn pill secondary"><i class="icon i-play sm"></i>Hear it</button>
+        <button class="btn sm secondary"><i class="icon i-again sm"></i>Try again</button>
+        <button class="btn quiet">Quiet link</button>
+        <button class="btn round"><i class="icon i-arrow"></i></button>
+      </div>
+      <div class="btn-row"><button class="btn success"><i class="icon i-check"></i>Keep</button><button class="btn danger">Delete</button><button class="btn" disabled>Off</button></div>
+    </section>
+
+    <section class="g-section">
+      <h2 class="g-h">Segmented, tabs <code>.segmented</code></h2>
+      <div class="segmented"><span class="done">Listen</span><span class="on">Repeat</span><span>Answer</span></div>
+      <div class="segmented neutral"><span>Day</span><span class="on">Week</span><span>Month</span></div>
+      <div class="tabs"><span class="on">Sentences</span><span>Questions</span><span>Threads</span></div>
+    </section>
+
+    <section class="g-section">
+      <h2 class="g-h">Deck <code>.deck</code></h2>
+      <div class="g-frame" style="background:var(--bg);padding:12px 0">
+        <p class="deck-meta" style="margin-bottom:10px">Card 3 of 18 · 2 learned</p>
+        <div class="deck">
+          <div class="peek prev"></div>
+          <article class="card" style="min-height:250px">
+            <p class="prompt">Comment vous appelez-vous ?<br><span class="caption" style="font-style:normal">What is your name?</span></p>
+            <span class="badge l1">Fact</span>
+            <p class="big-text">Je m'appelle Léa.</p>
+            <p class="translation">My name is Léa.</p>
+          </article>
+          <div class="peek next"></div>
+        </div>
+        <div class="dots" style="margin-top:12px"><i class="done"></i><i class="done"></i><i class="on"></i><i></i><i></i></div>
+      </div>
+    </section>
+
+    <section class="g-section">
+      <h2 class="g-h">Word chips <code>.words .w</code></h2>
+      <div class="card">
+        <div class="words"><span class="w ok">J'ai</span><span class="w ok">deux</span><span class="w close">enfant</span><span class="w miss">qui</span><span class="w box">ont</span><span class="w box">14</span><span class="w box">ans</span><span class="w punct">.</span></div>
+        <p class="heard">You're saying: <b>j'ai deux enfant</b></p>
+        <div class="words sm"><span class="w ok">Je</span><span class="w ok">m'appelle</span><span class="w next">Léa</span><span class="w box">et</span><span class="w box">voilà</span></div>
+      </div>
+    </section>
+
+    <section class="g-section">
+      <h2 class="g-h">Blanks <code>.blank .slot</code></h2>
+      <div class="card">
+        <p class="big-text">Je m'appelle <span class="slot">Léa</span>.</p>
+        <p class="big-text">J'ai <span class="blank active">00</span> ans.</p>
+      </div>
+    </section>
+
+    <section class="g-section">
+      <h2 class="g-h">Chips <code>.chip</code></h2>
+      <p class="chips-label">3 ways to answer</p>
+      <div class="chips">
+        <span class="chip on">Je m'appelle…</span><span class="chip">Mon nom est…</span><span class="chip">Moi, c'est…</span><span class="chip more">+2 more</span>
+      </div>
+      <div class="chips">
+        <span class="chip sm">et <span class="sub">add</span></span><span class="chip sm on">mais <span class="sub">contrast</span></span><span class="chip sm">depuis <span class="sub">time</span></span><span class="chip sm add"><i class="icon i-plus sm"></i>Other</span>
+      </div>
+    </section>
+
+    <section class="g-section">
+      <h2 class="g-h">Badges <code>.badge .count .dot</code></h2>
+      <div class="hstack wrap">
+        <span class="badge l1">Fact</span><span class="badge l2">Detail</span><span class="badge l3">Opinion</span>
+        <span class="badge soft success"><i class="icon i-check sm"></i>Learned</span><span class="badge soft warning">Close</span>
+        <span class="badge solid">New</span><span class="badge soft muted">Draft</span><span class="count">3</span><span class="dot l2"></span>
+      </div>
+    </section>
+
+    <section class="g-section">
+      <h2 class="g-h">List <code>.list .row</code></h2>
+      <p class="section-label">By topic</p>
+      <div class="list">
+        <div class="row link"><div class="row-main"><span class="row-title">About you</span><div class="progress thin" style="--value:.4"></div></div><span class="row-end">4 of 11</span></div>
+        <div class="row"><span class="check on"></span><div class="row-main"><span class="row-title">Je suis née à Lyon.</span><span class="row-sub">I was born in Lyon.</span></div><span class="badge l1">Fact</span></div>
+        <div class="row"><span class="check"></span><div class="row-main"><span class="row-title">J'ai grandi à Lyon.</span><span class="row-sub">I grew up in Lyon.</span></div></div>
+        <div class="row dim"><span class="handle"></span><div class="row-main"><span class="row-title">Dimmed row</span></div><span class="row-end">Build it</span></div>
+      </div>
+    </section>
+
+    <section class="g-section">
+      <h2 class="g-h">Sequence <code>.seq</code></h2>
+      <div class="seq">
+        <div class="seq-item"><span class="num on">1</span><span class="grow">Je m'appelle Léa</span></div>
+        <div class="seq-link"><span class="chip sm on">et <span class="sub">add</span></span></div>
+        <div class="seq-item"><span class="num on">2</span><span class="grow">j'ai 34 ans.</span></div>
+        <div class="seq-link"><span class="chip sm add"><i class="icon i-plus sm"></i>Connector</span></div>
+        <div class="seq-item"><span class="num">3</span><span class="grow">Je suis née à Lyon.</span></div>
+      </div>
+    </section>
+
+    <section class="g-section">
+      <h2 class="g-h">Progress <code>.progress .ring</code></h2>
+      <div class="card">
+        <div class="hstack"><div class="ring" style="--value:.35">35%</div><div class="grow stack tight"><span class="stat">35% learned</span><div class="progress" style="--value:.35"></div></div></div>
+        <div class="progress success thick" style="--value:.8"></div>
+      </div>
+    </section>
+
+    <section class="g-section">
+      <h2 class="g-h">Mic <code>.mic</code></h2>
+      <div class="card" style="padding:28px 20px">
+        <div class="hstack" style="justify-content:space-around">
+          <div class="stack tight"><span class="mic"></span><span class="mic-label">Tap to speak</span></div>
+          <div class="stack tight"><span class="mic listening" style="--level:.7"></span><span class="mic-label live"><span class="level-bars"><i></i><i></i><i></i><i></i><i></i></span> Listening</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="g-section">
+      <h2 class="g-h">Banners <code>.banner</code></h2>
+      <div class="banner success"><i class="icon i-check"></i><span><b>Learned.</b> <span class="banner-text">Practise it any time.</span></span></div>
+      <div class="banner"><i class="icon i-info"></i><span class="banner-text">This Question is answered by joining your Sentences.</span></div>
+      <div class="banner warning"><i class="icon i-warn"></i><span class="banner-text">Only a default French voice is installed.</span></div>
+      <div class="banner danger"><i class="icon i-warn"></i><span class="banner-text">Couldn't hear you. Try again closer to the mic.</span></div>
+    </section>
+
+    <section class="g-section">
+      <h2 class="g-h">Text field <code>.field .input</code></h2>
+      <div class="field"><label class="field-label">Your first name</label><div class="input-row"><div class="input focus">Léa</div><button class="btn round"><i class="icon i-chevron"></i></button></div><span class="field-help">Press › for the next blank.</span></div>
+      <div class="input placeholder">En français…</div>
+    </section>
+
+    <section class="g-section">
+      <h2 class="g-h">Empty state <code>.empty</code></h2>
+      <div class="card flat"><div class="empty"><div class="empty-icon"><i class="icon i-link"></i></div><p class="empty-title">No Threads yet</p><p class="empty-text">Join your Sentences into one answer for the broad Questions.</p><button class="btn pill">Build a Thread</button></div></div>
+    </section>
+
+    <section class="g-section">
+      <h2 class="g-h">Icons <code>.icon.i-*</code></h2>
+      <div class="icons">
+        <span><i class="icon i-back"></i>back</span><span><i class="icon i-chevron"></i>chevron</span><span><i class="icon i-down"></i>down</span><span><i class="icon i-play"></i>play</span><span><i class="icon i-pause"></i>pause</span><span><i class="icon i-stop"></i>stop</span><span><i class="icon i-mic"></i>mic</span>
+        <span><i class="icon i-check"></i>check</span><span><i class="icon i-plus"></i>plus</span><span><i class="icon i-close"></i>close</span><span><i class="icon i-edit"></i>edit</span><span><i class="icon i-speaker"></i>speaker</span><span><i class="icon i-grip"></i>grip</span><span><i class="icon i-search"></i>search</span>
+        <span><i class="icon i-more"></i>more</span><span><i class="icon i-arrow"></i>arrow</span><span><i class="icon i-again"></i>again</span><span><i class="icon i-link"></i>link</span><span><i class="icon i-info"></i>info</span><span><i class="icon i-warn"></i>warn</span><span><i class="icon i-star"></i>star</span>
+        <span><i class="icon i-home"></i>home</span><span><i class="icon i-list"></i>list</span><span><i class="icon i-gear"></i>gear</span><span><i class="icon i-sparkle"></i>sparkle</span><span><i class="icon i-lock"></i>lock</span><span><i class="icon i-keyboard"></i>keyboard</span><span><i class="icon i-flag"></i>flag</span>
+      </div>
+    </section>
+
+    <section class="g-section">
+      <h2 class="g-h">Sheet, toast <code>.sheet .toast</code></h2>
+      <div class="g-frame" style="height:330px;background:var(--bg)">
+        <span class="toast" style="top:16px"><i class="icon i-check sm"></i>Thread saved</span>
+        <div class="scrim"></div>
+        <div class="sheet" style="padding-bottom:20px">
+          <p class="sheet-title">Connector after piece 2</p>
+          <div class="chips"><span class="chip on">et <span class="sub">add</span></span><span class="chip">en plus <span class="sub">add</span></span><span class="chip">mais <span class="sub">contrast</span></span></div>
+          <button class="btn block">Use it</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="g-section">
+      <h2 class="g-h">Tab bar, keyboard <code>.tab-bar .keyboard</code></h2>
+      <div class="g-frame" style="background:var(--bg)">
+        <nav class="tab-bar" style="padding-bottom:8px"><span class="on"><i class="icon i-home"></i>Home</span><span><i class="icon i-list"></i>Library</span><span><i class="icon i-mic"></i>Drill</span><span><i class="icon i-gear"></i>Settings</span></nav>
+        <div class="keyboard" style="margin:0"></div>
+      </div>
+    </section>
+  </main>
+
+  <div class="bottom">
+    <div class="panel" style="padding:0">
+      <div class="segmented"><span class="on done">Listen</span><span>Repeat</span><span>Answer</span></div>
+      <div class="panel-row"><button class="btn pill secondary"><i class="icon i-play sm"></i>Hear it again</button><span class="hint">or swipe</span></div>
+    </div>
+  </div>
+  <div class="home-indicator"></div>
+</div>
+</body>
+</html>

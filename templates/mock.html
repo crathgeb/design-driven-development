@@ -1,0 +1,43 @@
+<!doctype html>
+<!-- design-driven-development mock: one state of one screen. Copy to mocks/<screen-id>--<state-id>.html.
+     Build it from kit classes (kit/README.md); keep the <style> block for what the kit lacks.
+     The kit is linked as /kit/mock.css, then the project's brand as /theme.css (the board server serves
+     both; export rewrites them to ../kit/ and ../theme.css). -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=390, initial-scale=1">
+<title>SCREEN TITLE · STATE TITLE</title>
+<link rel="stylesheet" href="/kit/mock.css">
+<link rel="stylesheet" href="/theme.css">
+<script src="/kit/mock.js" defer></script>
+<style>
+  /* Only the few styles this screen needs that the kit has no class for, built on the kit's variables
+     (var(--accent), var(--r-lg)). The brand (colours, fonts, radii) is theme.css's job: never hard-code it here. */
+</style>
+</head>
+<body>
+<div class="screen">
+  <header class="status-bar">9:41</header>
+
+  <nav class="nav-bar">
+    <a class="nav-back">Back</a>
+    <span class="nav-title">Screen title</span>
+    <span></span>
+  </nav>
+
+  <main class="content">
+    <article class="card">
+      <p class="prompt">The question or context, in the product's language.</p>
+      <p class="big-text">The real content of this state.</p>
+      <p class="translation">Its translation or supporting line.</p>
+    </article>
+  </main>
+
+  <div class="bottom">
+    <button class="btn block">Primary action</button>
+  </div>
+  <div class="home-indicator"></div>
+</div>
+</body>
+</html>

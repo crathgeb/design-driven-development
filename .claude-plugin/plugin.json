@@ -1,0 +1,14 @@
+{
+  "name": "design-driven-development",
+  "displayName": "Design-Driven Development",
+  "version": "0.2.0",
+  "description": "Design an experience before building it. Claude writes HTML mocks of every screen and state, laid out on a board in your browser. Draw and pin notes on them, press Send to Claude, and background workers revise the mocks while you keep looking. When it's right, export the spec into your repo.",
+  "author": {
+    "name": "TechSnack LLC",
+    "url": "https://github.com/crathgeb"
+  },
+  "homepage": "https://github.com/crathgeb/design-driven-development",
+  "repository": "https://github.com/crathgeb/design-driven-development",
+  "license": "MIT",
+  "keywords": ["design", "ux", "mocks", "prototyping", "spec", "annotation"]
+}
