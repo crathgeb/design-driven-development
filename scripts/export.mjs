@@ -16,6 +16,7 @@ import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSyn
 import { join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
+import { boardDevices, describeDevice, deviceText, resolveDevice, sameDevice } from '../lib/devices.mjs';
 import { describeMark, loadJobs } from '../lib/jobs.mjs';
 import { loadBoard, loadNotes, loadProject, logEvent, paths, PLUGIN_ROOT, resolveProject } from '../lib/project.mjs';
 import { shoot } from './shoot.mjs';
@@ -41,10 +42,10 @@ function copyTree(src, dest, transform = null) {
   return n;
 }
 
-/** The read-only board: ui/board.html with the project's data in a script tag. */
+/** The read-only board: ui/board.html with the project's data (and every state's device) in a script tag. */
 export function staticBoard({ project, board, notes, jobs }) {
   const shell = readFileSync(join(PLUGIN_ROOT, 'ui', 'board.html'), 'utf8');
-  const data = JSON.stringify({ project, board, notes, jobs }).replace(/</g, '\\u003c');
+  const data = JSON.stringify({ project, board, devices: boardDevices(project, board), notes, jobs }).replace(/</g, '\\u003c');
   return shell.replace('<script src="ui/board.js"></script>', `<script id="ddd-data" type="application/json">${data}</script>\n  <script src="ui/board.js"></script>`);
 }
 
@@ -59,6 +60,9 @@ export function specSkeleton({ project, board, notes }) {
   L.push('     the "Material" lists are raw input from the author (resolved marks and notes): fold them into the text, then delete them. -->');
   L.push('');
   L.push('Open `index.html` for the board (every state as a live mock, read-only). Screenshots are in `screens/`.');
+  L.push('');
+  const base = describeDevice(project.device);
+  L.push(`Designed for: ${deviceText(base)} CSS pixels${board.flows.some((f) => f.screens.some((sc) => sc.states.some((st) => !sameDevice(resolveDevice(project, sc, st), base)))) ? ' (states designed for another device say so)' : ''}.`);
   L.push('');
   if (q(notes.general)) L.push('## Context from the author', '', q(notes.general), '');
   if (q(notes.app?.note)) L.push('## Design direction (the author)', '', q(notes.app.note), '');
@@ -77,6 +81,8 @@ export function specSkeleton({ project, board, notes }) {
         const png = state.file.replace(/^mocks\//, 'screens/').replace(/\.html$/, '.png');
         L.push(`#### State: ${state.title} (\`${state.id}\`)`, '');
         L.push(state.intent ? `*Intent:* ${state.intent}` : '*Intent:* TODO', '');
+        const dev = resolveDevice(project, screen, state);
+        if (!sameDevice(dev, base)) L.push(`*Device:* ${deviceText(dev)}`, '');
         L.push(`![${screen.title}: ${state.title}](${png}) · [mock](${state.file})`, '');
         L.push("**What's on screen:** TODO", '');
         L.push('**Decisions settled:** TODO', '');

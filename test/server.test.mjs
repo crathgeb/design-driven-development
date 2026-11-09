@@ -46,6 +46,21 @@ describe('server', () => {
     assert.ok(!loadBoard(dir).flows[1].screens[0].states.some((s) => s.id === 's1'));
   });
 
+  test("devices: /api/project resolves each state's, and board edits set them", async () => {
+    const before = await http(url + 'api/project');
+    assert.equal(before.json.devices.default.name, 'phone');
+    assert.deepEqual(before.json.devices.states['thread-composer/empty'], { name: 'phone', label: 'Phone', width: 390, height: 844, kind: 'phone' });
+    const set = await http(url + 'api/board', 'POST', { op: 'update', screen: 'piece-picker', device: 'desktop' });
+    assert.equal(set.status, 200, set.text);
+    const bad = await http(url + 'api/board', 'POST', { op: 'update', screen: 'piece-picker', device: 'toaster' });
+    assert.equal(bad.status, 400);
+    assert.match(bad.text, /unknown device/);
+    const after = await http(url + 'api/project');
+    assert.equal(after.json.devices.states['piece-picker/default'].width, 1440);
+    assert.equal(after.json.devices.states['piece-picker/default'].kind, 'browser');
+    await http(url + 'api/board', 'POST', { op: 'update', screen: 'piece-picker', device: 'inherit' });
+  });
+
   test('notes round trip, and the server keeps the statuses it owns', async () => {
     const notes = {
       general: 'Calm, not gamified',

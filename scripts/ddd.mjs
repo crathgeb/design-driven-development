@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 // The design-driven-development CLI: create, serve, list and find projects. Node built-ins only.
 //
-//   node ddd.mjs init "<name>" [--repo <path>] [--goal "<line>"]   create a project; prints its folder
+//   node ddd.mjs init "<name>" [--repo <path>] [--goal "<line>"] [--device phone|tablet|laptop|desktop|WxH]
+//                                                                  create a project; prints its folder
+//   node ddd.mjs set-device <slug|path> <device>                   change the project's default device
 //   node ddd.mjs serve <slug|path> [--no-open] [--port N]          serve its board (stays in the foreground)
 //   node ddd.mjs list [--all]                                      projects for this repo (or every repo)
 //   node ddd.mjs path <slug>                                       print a project's folder
@@ -13,14 +15,17 @@ import { existsSync, rmSync } from 'node:fs';
 import { basename } from 'node:path';
 import { parseArgs } from 'node:util';
 import { findServer } from '../lib/client.mjs';
-import { FIRST_PORT, homeNote, initProject, listProjects, loadProject, paths, readJson, repoRoot, resolveProject, writeJsonAtomic } from '../lib/project.mjs';
+import { deviceText, PRESET_NAMES } from '../lib/devices.mjs';
+import { FIRST_PORT, homeNote, initProject, listProjects, loadProject, paths, readJson, repoRoot, resolveProject, setProjectDevice, writeJsonAtomic } from '../lib/project.mjs';
 import { startServer } from '../lib/server.mjs';
 
 const USAGE = `usage:
-  ddd.mjs init "<name>" [--repo <path>] [--goal "<line>"]
+  ddd.mjs init "<name>" [--repo <path>] [--goal "<line>"] [--device <device>]
+  ddd.mjs set-device <slug|path> <device>
   ddd.mjs serve <slug|path> [--no-open] [--port N]
   ddd.mjs list [--all]
-  ddd.mjs path <slug>`;
+  ddd.mjs path <slug>
+<device> is ${PRESET_NAMES.join(', ')} or a size like 1366x768 (default phone).`;
 
 function fail(msg, code = 1) {
   console.error(`ddd: ${msg}`);
@@ -34,6 +39,7 @@ try {
     options: {
       repo: { type: 'string' },
       goal: { type: 'string' },
+      device: { type: 'string' },
       port: { type: 'string' },
       'no-open': { type: 'boolean' },
       all: { type: 'boolean' },
@@ -43,7 +49,7 @@ try {
 } catch (err) {
   fail(`${err.message}\n${USAGE}`, 2);
 }
-const { values: o, positionals: [cmd, arg] } = args;
+const { values: o, positionals: [cmd, arg, arg2] } = args;
 if (o.help || !cmd) {
   console.log(USAGE);
   process.exit(cmd || o.help ? 0 : 2);
@@ -55,9 +61,14 @@ if (note) console.error(`ddd: ${note}`);
 try {
   if (cmd === 'init') {
     if (!arg) fail(`init needs a name\n${USAGE}`, 2);
-    const { dir, created } = initProject({ name: arg, repo: o.repo, goal: o.goal || '' });
-    if (!created) console.error(`ddd: a project with that slug already exists; using it`);
+    const { dir, created } = initProject({ name: arg, repo: o.repo, goal: o.goal || '', device: o.device });
+    if (!created) console.error(`ddd: a project with that slug already exists; using it${o.device ? ' (its device is unchanged: use set-device)' : ''}`);
     console.log(dir);
+  } else if (cmd === 'set-device') {
+    if (!arg || !arg2) fail(`set-device needs a project and a device\n${USAGE}`, 2);
+    const dir = resolveProject(arg);
+    const d = setProjectDevice(dir, arg2);
+    console.log(`ddd: ${basename(dir)} is designed for ${deviceText(d)} (screens and states with their own device keep it)`);
   } else if (cmd === 'path') {
     console.log(resolveProject(arg));
   } else if (cmd === 'list') {
