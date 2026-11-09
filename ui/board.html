@@ -1,5 +1,6 @@
 <!doctype html>
-<!-- The design-driven-development board: every flow, screen and state of a project as live phone frames.
+<!-- The design-driven-development board: every flow, screen and state of a project as live frames, each
+     sized to its state's device (phone, tablet, desktop, laptop or a custom size).
      Served by lib/server.mjs at /; export.mjs reuses it, read-only, for the exported spec. -->
 <html lang="en">
 <head>
@@ -100,7 +101,14 @@
         </div>
         <div class="stage-tools">
           <span class="hint muted" id="tool-hint"></span>
-          <button class="btn small ghost" id="fit-btn" type="button" title="Fit to height or show at 100%">100%</button>
+          <span class="stage-device muted" id="stage-device"></span>
+          <div class="stage-zoom" role="group" aria-label="Zoom">
+            <button class="btn small ghost" id="stage-fit" type="button" title="Fit the frame (0)">Fit</button>
+            <button class="icon-btn small" id="stage-out" type="button" title="Zoom out (−)" aria-label="Zoom out"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8h9"/></svg></button>
+            <span class="zoom-val" id="stage-zoom-val">100%</span>
+            <button class="icon-btn small" id="stage-in" type="button" title="Zoom in (+)" aria-label="Zoom in"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8h9M8 3.5v9"/></svg></button>
+            <button class="btn small ghost" id="stage-100" type="button" title="Actual size: one CSS pixel per pixel (1)">100%</button>
+          </div>
         </div>
       </div>
       <div class="stage-body" id="stage-body">

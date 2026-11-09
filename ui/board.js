@@ -1,4 +1,5 @@
-// The board app: renders a project's flows, screens and states as live phone frames, the focus
+// The board app: renders a project's flows, screens and states as live frames sized to each state's
+// device (phone, tablet, desktop or laptop browser window, or a custom size), the focus
 // view where the author draws marks (pin, box, ellipse, arrow, pen, note) over a state, the sidebar
 // (every flow and screen, the one in view highlighted), the Whole app panel (design direction and
 // requests for the whole app, a flow or a screen), and the Claude controls (Send, Ask, Activity).
@@ -9,8 +10,15 @@
 (() => {
   'use strict';
 
-  const W = 390;
-  const H = 844;
+  // Each state's device comes from the server (/api/project "devices", resolved by lib/devices.mjs) or the
+  // exported data; a board without them (an older export) is all phones.
+  const PHONE = { name: 'phone', label: 'Phone', width: 390, height: 844, kind: 'phone' };
+  // On the board a frame fits a box of zoom × (BOX_W × BOX_H): a phone at the zoom, wider devices smaller.
+  const BOX_W = 900;
+  const BOX_H = 844;
+  const THUMB_W = 240;
+  const THUMB_H = 169;
+  const STAGE_STEPS = [0.25, 0.33, 0.5, 0.67, 0.75, 0.9, 1, 1.25, 1.5, 2];
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const DATA = document.getElementById('ddd-data');
@@ -47,11 +55,12 @@
   const S = {
     project: null,
     board: { flows: [] },
+    devices: null, // { default, states: { "<screen>/<state>": { name, label, width, height, kind } } }
     notes: { general: '', app: { note: '' }, screens: {}, asks: [] },
     jobs: [],
     claude: { connected: false, phase: 'idle', message: '' },
     zoom: clampZoom(store.get('zoom', 0.55)),
-    fit: store.get('fit', true),
+    stageZoom: store.get('stageZoom', 'fit'), // 'fit' or a scale for the focus view
     focus: null, // { screen, state }
     tool: 'select',
     hot: null, // selected mark id
@@ -100,11 +109,11 @@
   async function load() {
     if (READ_ONLY) {
       const d = JSON.parse(DATA.textContent);
-      Object.assign(S, { project: d.project, board: d.board, notes: normNotes(d.notes), jobs: d.jobs || [] });
+      Object.assign(S, { project: d.project, board: d.board, devices: d.devices || null, notes: normNotes(d.notes), jobs: d.jobs || [] });
       return;
     }
     const d = await api('GET', 'api/project');
-    Object.assign(S, { project: d.project, board: d.board, notes: normNotes(d.notes), jobs: d.jobs, claude: d.claude });
+    Object.assign(S, { project: d.project, board: d.board, devices: d.devices || null, notes: normNotes(d.notes), jobs: d.jobs, claude: d.claude });
   }
 
   function normNotes(n) {
@@ -116,6 +125,32 @@
     notes.app.note = notes.app.note || '';
     return notes;
   }
+
+  // ---------- devices ----------
+
+  const defaultDevice = () => S.devices?.default || PHONE;
+  const deviceOf = (screen, state) => S.devices?.states?.[`${screen}/${state}`] || defaultDevice();
+  const sameDevice = (a, b) => a.name === b.name && a.width === b.width && a.height === b.height;
+  const deviceText = (d) => `${d.label} · ${d.width}×${d.height}`;
+  const DEVICE_ICONS = {
+    phone: '<rect x="4.5" y="1.5" width="7" height="13" rx="1.8"/><path d="M7 12.5h2"/>',
+    tablet: '<rect x="2.5" y="1.5" width="11" height="13" rx="1.8"/><path d="M7 12.5h2"/>',
+    desktop: '<rect x="1.5" y="2.5" width="13" height="8.5" rx="1.2"/><path d="M6 14h4M8 11v3"/>',
+    laptop: '<rect x="3" y="3" width="10" height="7.5" rx="1"/><path d="M1.5 13h13"/>',
+    custom: '<rect x="2.5" y="2.5" width="11" height="11" rx="1.5" stroke-dasharray="2 1.6"/>',
+  };
+  const deviceIcon = (d) => {
+    const s = document.createElementNS(SVGNS, 'svg');
+    s.setAttribute('viewBox', '0 0 16 16');
+    s.setAttribute('aria-hidden', 'true');
+    s.innerHTML = DEVICE_ICONS[d.name] || DEVICE_ICONS.custom;
+    return s;
+  };
+  /** A frame's scale on the board: the zoom, smaller for devices wider or taller than the board's box. */
+  const boardScale = (d) => S.zoom * Math.min(1, BOX_W / d.width, BOX_H / d.height);
+  const thumbScale = (d) => Math.min(THUMB_W / d.width, THUMB_H / d.height);
+  /** The browser window's title bar height at scale z (desktop and laptop frames); 0 for other frames. */
+  const chromeHeight = (d, z, fixed) => (d.kind !== 'browser' ? 0 : fixed || Math.round(Math.max(8, Math.min(30, 40 * z))));
 
   const screenNotes = (screen) => S.notes.screens[screen] || null;
   const stateNotes = (screen, state) => S.notes.screens[screen]?.states?.[state] || null;
@@ -208,14 +243,29 @@
     if (appOpen()) paintApp(false);
   }
 
-  // ---------- phone frames ----------
+  // ---------- frames ----------
 
-  const frames = new Set(); // { file, phone, iframe }
+  const frames = new Set(); // { file, el, iframe, screen, state, dev, cap? }
 
-  /** A phone frame showing one state's mock at scale z. */
-  function phone(screen, state, z, { interactive = false, register = true } = {}) {
-    const p = el('div', { class: 'phone', 'data-screen': screen.id, 'data-state': state.id });
-    sizePhone(p, z);
+  /**
+   * A frame showing one state's mock at scale z, in its device's chrome: a phone's rounded screen, a tablet's
+   * squarer one, a browser window (title bar, three dots, an address bar with the state's title) for
+   * desktop and laptop, a plain rounded frame for a custom size. The iframe is the device's size in CSS
+   * pixels, scaled with a transform so it stays crisp. chrome: a fixed title bar height (the focus view).
+   */
+  function frame(screen, state, z, { interactive = false, register = true, chrome = 0 } = {}) {
+    const dev = deviceOf(screen.id, state.id);
+    const p = el('div', { class: `frame k-${dev.kind}`, 'data-screen': screen.id, 'data-state': state.id, 'data-device': dev.name });
+    if (dev.kind === 'browser') {
+      p.append(
+        el(
+          'div',
+          { class: 'chrome', 'aria-hidden': 'true' },
+          el('span', { class: 'dots' }, el('i'), el('i'), el('i')),
+          el('span', { class: 'addr' }, el('span', { class: 'addr-text', 'data-t': `state:${screen.id}:${state.id}:title`, text: state.title || state.id })),
+        ),
+      );
+    }
     const box = el('div', { class: 'screenbox' });
     const iframe = el('iframe', {
       src: state.file,
@@ -224,27 +274,37 @@
       tabindex: interactive ? null : '-1',
       scrolling: interactive ? null : 'no',
     });
-    iframe.style.transform = `scale(${z})`;
+    iframe.style.width = `${dev.width}px`;
+    iframe.style.height = `${dev.height}px`;
     box.append(iframe, el('div', { class: 'working' }, el('span', { class: 'working-label' })));
     if (!interactive) box.append(el('div', { class: 'catch' }));
     p.append(box, el('span', { class: 'badge', hidden: true }));
-    const rec = { file: state.file, phone: p, iframe, screen: screen.id, state: state.id };
+    const rec = { file: state.file, el: p, iframe, screen: screen.id, state: state.id, dev, chrome };
+    sizeFrame(rec, z);
     if (register) frames.add(rec);
     return { el: p, iframe, box, rec };
   }
 
-  function sizePhone(p, z) {
+  function sizeFrame(rec, z) {
+    const { el: p, dev } = rec;
+    const ch = chromeHeight(dev, z, rec.chrome);
+    rec.z = z;
     p.style.setProperty('--z', z);
-    p.style.width = `${W * z}px`;
-    p.style.height = `${H * z}px`;
-    const f = p.querySelector('iframe');
-    if (f) f.style.transform = `scale(${z})`;
+    p.style.setProperty('--ch', `${ch}px`);
+    p.style.width = `${dev.width * z}px`;
+    p.style.height = `${dev.height * z + ch}px`;
+    const box = p.querySelector('.screenbox');
+    box.style.top = `${ch}px`;
+    box.style.height = `${dev.height * z}px`;
+    p.querySelector('.chrome')?.classList.toggle('tiny', ch < 18);
+    rec.iframe.style.transform = `scale(${z})`;
     const o = p.querySelector('.overlay');
     if (o) o.style.transform = `scale(${z})`;
+    if (rec.cap) rec.cap.style.width = `${Math.max(dev.width * z, 150)}px`;
   }
 
   function reloadFrame(rec) {
-    const { iframe, phone: p } = rec;
+    const { iframe, el: p } = rec;
     let sx = 0, sy = 0;
     try {
       sx = iframe.contentWindow.scrollX;
@@ -269,12 +329,15 @@
   }
 
   function pruneFrames() {
-    for (const f of frames) if (!f.phone.isConnected) frames.delete(f);
+    for (const f of frames) if (!f.el.isConnected) frames.delete(f);
   }
 
   // ---------- the board ----------
 
-  const signature = () => JSON.stringify(S.board.flows.map((f) => [f.id, (f.screens || []).map((s) => [s.id, (s.states || []).map((st) => [st.id, st.file])])]));
+  const signature = () =>
+    JSON.stringify(
+      S.board.flows.map((f) => [f.id, (f.screens || []).map((s) => [s.id, (s.states || []).map((st) => [st.id, st.file, deviceText(deviceOf(s.id, st.id))])])]),
+    ) + deviceText(defaultDevice());
 
   function renderBoard() {
     S.sig = signature();
@@ -311,16 +374,20 @@
         );
         screens.append(el('div', { class: 'screen', 'data-screen': screen.id }, head, states));
         for (const state of screen.states || []) {
-          const ph = phone(screen, state, S.zoom);
-          ph.el.addEventListener('click', () => openFocus(screen.id, state.id));
+          const dev = deviceOf(screen.id, state.id);
+          const other = !sameDevice(dev, defaultDevice());
           const cap = el(
             'div',
             { class: 'caption' },
             el('p', { class: 'caption-title', 'data-t': `state:${screen.id}:${state.id}:title` }),
+            other ? el('p', { class: 'caption-device', title: 'Designed for this device (the project default is ' + deviceText(defaultDevice()) + ')' }, deviceIcon(dev), deviceText(dev)) : null,
             el('p', { class: 'caption-intent', 'data-t': `state:${screen.id}:${state.id}:intent` }),
           );
-          cap.style.width = `${W * S.zoom}px`;
-          states.append(el('div', { class: 'state' }, ph.el, cap));
+          const fr = frame(screen, state, boardScale(dev));
+          fr.rec.cap = cap;
+          sizeFrame(fr.rec, fr.rec.z);
+          fr.el.addEventListener('click', () => openFocus(screen.id, state.id));
+          states.append(el('div', { class: 'state' }, fr.el, cap));
         }
       }
     }
@@ -368,7 +435,7 @@
 
   function paintCounts() {
     for (const f of frames) {
-      const b = f.phone.querySelector('.badge');
+      const b = f.el.querySelector('.badge');
       if (!b) continue;
       const marks = marksOf(f.screen, f.state);
       const open = marks.filter((m) => (m.status || 'open') === 'open').length;
@@ -405,9 +472,9 @@
     paintSideWorking(by);
     for (const f of frames) {
       const st = by.get(f.screen);
-      f.phone.classList.toggle('updating', st === 'updating');
-      f.phone.classList.toggle('queued', st === 'queued');
-      const label = f.phone.querySelector('.working-label');
+      f.el.classList.toggle('updating', st === 'updating');
+      f.el.classList.toggle('queued', st === 'queued');
+      const label = f.el.querySelector('.working-label');
       if (label) label.textContent = st === 'updating' ? 'Claude is updating' : st === 'queued' ? 'Waiting for Claude' : '';
     }
   }
@@ -417,8 +484,7 @@
     store.set('zoom', S.zoom);
     $('#zoom-range').value = S.zoom;
     $('#zoom-val').textContent = `${Math.round(S.zoom * 100)}%`;
-    for (const f of frames) if (f.phone.closest('#board')) sizePhone(f.phone, S.zoom);
-    $$('#board .caption').forEach((c) => (c.style.width = `${W * S.zoom}px`));
+    for (const f of frames) if (f.el.closest('#board')) sizeFrame(f, boardScale(f.dev));
   }
 
   // ---------- Claude: pill, activity ----------
@@ -499,7 +565,8 @@
 
   // ---------- focus view ----------
 
-  let stage = null; // { phone, iframe, overlay, svg, scroller, marksG, previewG, z, sx, sy }
+  let stage = null; // { el, iframe, overlay, svg, scroller, marksG, previewG, z, sx, sy, rec, dev }
+  const STAGE_CHROME = 30; // the browser title bar in the focus view, whatever the scale
 
   function openFocus(screen, state) {
     const hit = findScreen(screen);
@@ -516,7 +583,7 @@
     $('#back').hidden = false;
     setTool('select');
     setCurrent(screen, true);
-    // The strip first: the stage fits the phone into the height the strip leaves.
+    // The strip first: the stage fits the frame into the room the strip leaves.
     if (!same) renderStrip();
     else paintStrip();
     renderStage();
@@ -564,12 +631,34 @@
     return hit && state ? { ...hit, state } : null;
   };
 
-  function stageZoom() {
+  /** The scale that fits a device's frame into the stage (never above 1). */
+  function stageFit(dev) {
     const body = $('#stage-body');
-    const fit = Math.min(1, (body.clientHeight - 40) / H, (body.clientWidth - 40) / W);
-    $('#fit-btn').hidden = fit >= 1;
-    $('#fit-btn').textContent = S.fit ? '100%' : 'Fit';
-    return S.fit ? Math.max(0.3, fit) : 1;
+    const ch = chromeHeight(dev, 1, STAGE_CHROME);
+    return Math.max(0.1, Math.min(1, (body.clientHeight - 36 - ch) / dev.height, (body.clientWidth - 36) / dev.width));
+  }
+
+  /** The focus view's scale: fitted, or the one the author picked (kept across states and visits). */
+  function stageZoom(dev) {
+    const fit = stageFit(dev);
+    const z = S.stageZoom === 'fit' ? fit : Number(S.stageZoom) || 1;
+    $('#stage-zoom-val').textContent = `${Math.round(z * 100)}%`;
+    $('#stage-fit').setAttribute('aria-pressed', String(S.stageZoom === 'fit'));
+    $('#stage-100').setAttribute('aria-pressed', String(S.stageZoom !== 'fit' && Math.abs(z - 1) < 0.001));
+    $('#stage-device').textContent = deviceText(dev);
+    $('#stage-device').title = sameDevice(dev, defaultDevice()) ? 'The project’s device' : `This state is designed for another device than the project’s (${deviceText(defaultDevice())})`;
+    return z;
+  }
+
+  function setStageZoom(v) {
+    if (!stage) return;
+    const cur = stage.z;
+    let next = v;
+    if (v === 'in') next = STAGE_STEPS.find((x) => x > cur + 0.001) ?? STAGE_STEPS[STAGE_STEPS.length - 1];
+    else if (v === 'out') next = [...STAGE_STEPS].reverse().find((x) => x < cur - 0.001) ?? STAGE_STEPS[0];
+    S.stageZoom = next;
+    store.set('stageZoom', next);
+    resizeStage();
   }
 
   function renderStage() {
@@ -578,11 +667,15 @@
     pruneFrames();
     const holder = $('#stage-frame');
     holder.textContent = '';
-    const z = stageZoom();
-    const ph = phone(d.screen, d.state, z, { interactive: true });
-    ph.el.querySelector('.badge')?.remove();
-    // The marks layer: an SVG in the mock's own coordinates, scaled with the iframe, shifted by its scroll.
+    const dev = deviceOf(d.screen.id, d.state.id);
+    const z = stageZoom(dev);
+    const fr = frame(d.screen, d.state, z, { interactive: true, chrome: dev.kind === 'browser' ? STAGE_CHROME : 0 });
+    fr.el.querySelector('.badge')?.remove();
+    // The marks layer: an SVG in the mock's own CSS pixels (its device's size), scaled with the iframe, shifted by its scroll.
+    const { width: W, height: H } = dev;
     const overlay = el('div', { class: 'overlay' });
+    overlay.style.width = `${W}px`;
+    overlay.style.height = `${H}px`;
     overlay.style.transform = `scale(${z})`;
     const s = svg('svg', { viewBox: `0 0 ${W} ${H}`, width: W, height: H });
     const catcher = svg('rect', { class: 'catcher', width: W, height: H });
@@ -592,10 +685,10 @@
     scroller.append(marksG, previewG);
     s.append(catcher, scroller);
     overlay.append(s);
-    ph.box.append(overlay);
-    holder.append(ph.el);
-    stage = { phone: ph.el, iframe: ph.iframe, overlay, svg: s, scroller, marksG, previewG, z, sx: 0, sy: 0, rec: ph.rec };
-    ph.iframe.addEventListener('load', () => attachFrame(ph.iframe));
+    fr.box.append(overlay);
+    holder.append(fr.el);
+    stage = { el: fr.el, iframe: fr.iframe, overlay, svg: s, scroller, marksG, previewG, z, sx: 0, sy: 0, rec: fr.rec, dev };
+    fr.iframe.addEventListener('load', () => attachFrame(fr.iframe));
     wireDrawing(overlay, s);
     paintFocusTexts();
     paintWorking();
@@ -648,9 +741,9 @@
     const d = focusData();
     if (!d) return;
     for (const st of d.screen.states || []) {
-      const ph = phone(d.screen, st, 0.2);
+      const ph = frame(d.screen, st, thumbScale(deviceOf(d.screen.id, st.id)));
       ph.el.querySelector('.working')?.remove();
-      const b = el('button', { class: 'thumb', type: 'button', 'data-state': st.id, title: st.title }, ph.el, el('span', { class: 'thumb-label', text: st.title || st.id }));
+      const b = el('button', { class: 'thumb', type: 'button', 'data-state': st.id, title: `${st.title || st.id} · ${deviceText(ph.rec.dev)}` }, ph.el, el('span', { class: 'thumb-label', text: st.title || st.id }));
       b.addEventListener('click', () => openFocus(d.screen.id, st.id));
       strip.append(b);
     }
@@ -954,7 +1047,7 @@
     let pts = null;
     const toDoc = (e) => {
       const r = s.getBoundingClientRect();
-      const z = r.width / W;
+      const z = r.width / stage.dev.width;
       return [(e.clientX - r.left) / z + stage.sx, (e.clientY - r.top) / z + stage.sy];
     };
     const shapeFrom = (a, b) => {
@@ -1036,7 +1129,7 @@
       } else if (ev.type === 'notes') {
         if (ev.from !== CLIENT) mergeIncoming(ev.notes);
       } else if (ev.type === 'file') {
-        if (ev.path === 'board.json') refresh();
+        if (ev.path === 'board.json' || ev.path === 'project.json') refresh();
         else if (ev.path.startsWith('assets/') || ev.path === 'theme.css') [...frames].forEach(reloadFrame);
         else for (const f of [...frames]) if (f.file === ev.path) reloadFrame(f);
       }
@@ -1051,6 +1144,7 @@
         const d = await api('GET', 'api/project');
         S.project = d.project;
         S.board = d.board;
+        S.devices = d.devices || null;
         S.jobs = d.jobs;
         S.claude = d.claude;
         mergeIncoming(d.notes);
@@ -1068,7 +1162,7 @@
               else closeFocus();
             } else {
               renderStrip();
-              if (stage && stage.rec.file !== d2.state.file) renderStage();
+              if (stage && (stage.rec.file !== d2.state.file || !sameDevice(stage.dev, deviceOf(d2.screen.id, d2.state.id)))) renderStage();
             }
           }
         } else paintTexts();
@@ -1108,6 +1202,7 @@
           { class: 's-screen', type: 'button', 'data-screen': screen.id, onclick: () => goScreen(screen.id) },
           el('span', { class: 's-work', hidden: true }),
           el('span', { class: 's-title', 'data-t': `screen:${screen.id}:title`, text: screen.title || screen.id }),
+          ...screenDevices(screen).map((d) => el('span', { class: 's-dev', title: `Designed for ${deviceText(d)}` }, deviceIcon(d))),
           el('span', { class: 's-badge', 'data-screen': screen.id, hidden: true }),
           el('span', { class: 's-states', text: n, title: plural(n, 'state') }),
         );
@@ -1139,6 +1234,16 @@
     paintCounts();
     paintWorking();
     paintCurrent(false);
+  }
+
+  /** The devices a screen's states use other than the project's, one per device. */
+  function screenDevices(screen) {
+    const seen = new Map();
+    for (const st of screen.states || []) {
+      const d = deviceOf(screen.id, st.id);
+      if (!sameDevice(d, defaultDevice())) seen.set(deviceText(d), d);
+    }
+    return [...seen.values()];
   }
 
   function fold(id) {
@@ -1472,11 +1577,10 @@
     // focus view
     $$('#rail button[data-tool]').forEach((b) => b.addEventListener('click', () => setTool(S.tool === b.dataset.tool && b.dataset.tool !== 'select' ? 'select' : b.dataset.tool)));
     $('#add-note').addEventListener('click', () => setTool('note'));
-    $('#fit-btn').addEventListener('click', () => {
-      S.fit = !S.fit;
-      store.set('fit', S.fit);
-      resizeStage();
-    });
+    $('#stage-fit').addEventListener('click', () => setStageZoom('fit'));
+    $('#stage-100').addEventListener('click', () => setStageZoom(1));
+    $('#stage-in').addEventListener('click', () => setStageZoom('in'));
+    $('#stage-out').addEventListener('click', () => setStageZoom('out'));
     $('#n-screen').addEventListener('input', (e) => {
       if (!S.focus) return;
       const s = (S.notes.screens[S.focus.screen] ||= { note: '', states: {} });
@@ -1499,9 +1603,9 @@
 
   function resizeStage() {
     if (!stage) return;
-    const z = stageZoom();
+    const z = stageZoom(stage.dev);
     stage.z = z;
-    sizePhone(stage.phone, z);
+    sizeFrame(stage.rec, z);
   }
 
   function onKey(e) {
@@ -1526,6 +1630,10 @@
         e.preventDefault();
         return setTool(TOOL_KEYS[k]);
       }
+      if (k === '-' || k === '_') return setStageZoom('out');
+      if (k === '=' || k === '+') return setStageZoom('in');
+      if (k === '0') return setStageZoom('fit');
+      if (k === '1') return setStageZoom(1);
       if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
         e.preventDefault();
         return step(e.key === 'ArrowLeft' ? -1 : 1);
@@ -1577,7 +1685,7 @@
   }
 
   // Exposed for tests and screenshots.
-  window.dddBoard = { state: S, openFocus, closeFocus, addMark, setTool, setZoom, selectMark, setSide, openApp, closeApp, goScreen, goFlow };
+  window.dddBoard = { state: S, openFocus, closeFocus, addMark, setTool, setZoom, setStageZoom, selectMark, setSide, openApp, closeApp, goScreen, goFlow };
 
   boot();
 })();
