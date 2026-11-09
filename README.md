@@ -102,6 +102,10 @@ Projects live outside your repo until you export them:
 
   Claude Code may already have installed `playwright-core` with the plugin; any Chromium playwright downloaded before, or a system Chrome, is used if the matching one is missing. `DDD_PLAYWRIGHT` can point at another `playwright-core` folder.
 
+## How it works
+
+[`docs/claude-as-a-backend.pdf`](docs/claude-as-a-backend.pdf) describes the architecture: Claude starts the server and the listener, and each request flows from the browser to a job, a background worker, and back.
+
 ## How it differs from plan-maker
 
 | | Starts from | For |
