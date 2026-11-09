@@ -1,0 +1,52 @@
+<!doctype html>
+<!-- design-driven-development mock for a tablet state (820×1180, portrait): one state of one screen. Copy to
+     mocks/<screen-id>--<state-id>.html. Touch-sized controls from kit/mock.css (the status bar, nav bar,
+     cards, lists, sheets), and kit/desktop.css for wider layouts (grids, the split view, tables); <html
+     class="touch"> keeps the controls finger-sized. Links: /kit/mock.css, /kit/desktop.css, then /theme.css
+     (export rewrites them). The page scrolls as a whole: no position: fixed, no inner scrolling areas. -->
+<html lang="en" class="touch">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SCREEN TITLE · STATE TITLE</title>
+<link rel="stylesheet" href="/kit/mock.css">
+<link rel="stylesheet" href="/kit/desktop.css">
+<link rel="stylesheet" href="/theme.css">
+<script src="/kit/mock.js" defer></script>
+<style>
+  /* Only the few styles this screen needs that the kit has no class for, built on the kit's variables.
+     The brand (colours, fonts, radii) is theme.css's job: never hard-code it here. */
+  .content { padding-inline: var(--s6); }
+</style>
+</head>
+<body>
+<div class="screen">
+  <header class="status-bar">9:41</header>
+
+  <nav class="nav-bar">
+    <a class="nav-back">Back</a>
+    <span class="nav-title">Screen title</span>
+    <a class="nav-action">Edit</a>
+  </nav>
+
+  <main class="content">
+    <h1 class="large-title">Screen title</h1>
+    <div class="grid cols-2">
+      <article class="card">
+        <p class="headline">The real content of this state</p>
+        <p class="muted">Two columns fit a tablet in portrait.</p>
+      </article>
+      <article class="card">
+        <p class="headline">A second card</p>
+        <p class="muted">With realistic data.</p>
+      </article>
+    </div>
+  </main>
+
+  <div class="bottom">
+    <button class="btn block">Primary action</button>
+  </div>
+  <div class="home-indicator"></div>
+</div>
+</body>
+</html>

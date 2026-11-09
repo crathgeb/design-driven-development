@@ -1,4 +1,4 @@
-/* design-driven-development kit: the shared look of every mock (a 390×844 iOS phone screen).
+/* design-driven-development kit: the shared look of every mock (touch screens: a 390×844 phone, a tablet; kit/desktop.css adds the web app on top).
    Link it from a mock as /kit/mock.css. Override any --token in the mock's own <style> to fit a product.
    Classes are documented in kit/README.md; kit/example.html shows them all. */
 

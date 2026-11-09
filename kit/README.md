@@ -1,6 +1,17 @@
 # The mock kit
 
-`kit/mock.css` is the shared look of every mock: a modern iOS screen at 390×844, light and dark. Use its classes so every worker's screens look like the same app. `kit/example.html` shows every component (open it at 390 wide, add `?theme=dark` for dark); it is also the kit's visual test.
+`kit/mock.css` is the shared look of every mock: a modern touch screen (iOS-style bars, cards, lists, sheets), light and dark. `kit/desktop.css`, linked after it, adds a web app: an app shell with a left nav and a top bar, page headers, grids, tables, forms, menus, dialogs and a split view, at desktop density, on the same variables (see "Desktop and web" below). Use their classes so every worker's screens look like the same app.
+
+`kit/example.html` shows every phone component (open it at 390 wide) and `kit/example-desktop.html` every desktop one (at 1440 wide; it reflows at 820 and 390); add `?theme=dark` for dark. They are also the kit's visual tests.
+
+**Which template for which device** (the board says each state's device; the context pack names the template):
+
+| Device | Size | Template | Kit |
+|---|---|---|---|
+| phone | 390×844 | `templates/mock.html` | `mock.css` |
+| tablet | 820×1180 | `templates/mock-tablet.html` | `mock.css` + `desktop.css`, `<html class="touch">` |
+| laptop, desktop | 1280×800, 1440×900 | `templates/mock-desktop.html` | `mock.css` + `desktop.css` |
+| custom `W×H` | its size | desktop from 1024 wide, tablet from 600, else phone | as the template |
 
 - **Link it** as `/kit/mock.css`, then the project theme as `/theme.css` (and `/kit/mock.js`, optional) — `templates/mock.html` already does. The board server serves both (`/theme.css` is an empty stylesheet when a project has none); `export.mjs` copies them beside the mocks and rewrites the links to `../kit/mock.css` and `../theme.css`.
 - **Theme** with CSS variables, in the project's `theme.css` (at the project folder's root): the brand for every mock at once (`:root { --accent: #0A7AFF; --font: … }`). Give dark values too, under `:root[data-theme='dark']` and `@media (prefers-color-scheme: dark)`. Dark applies under `prefers-color-scheme: dark` or `<html data-theme="dark">`; `?theme=dark|light` on a mock's URL forces one (via `mock.js`).
@@ -25,7 +36,7 @@
 
 | Class | Example |
 |---|---|
-| `.screen` | `<div class="screen">…</div>`: the whole phone screen, a column at least 844 high |
+| `.screen` | `<div class="screen">…</div>`: the whole phone (or tablet) screen, a column at least the viewport high |
 | `.screen.surface` | white page instead of `--bg` |
 | `.status-bar` | `<header class="status-bar">9:41</header>`: time, signal, wifi, battery. `.on-dark` for white |
 | `.nav-bar` | `<nav class="nav-bar"><a class="nav-back">Learn</a><span class="nav-title">About you</span><a class="nav-action">Edit</a></nav>` (use `<span></span>` for an empty side) |
@@ -136,3 +147,36 @@
 | Class | Example |
 |---|---|
 | `.mock-label` (`.warn`) | `<span class="mock-label warn">Alternative B</span>`: a tag in the corner saying what a mock is (an alternative, a concept sketch), so nobody mistakes it for the proposal |
+
+## Desktop and web (`kit/desktop.css`)
+
+Link it after `mock.css` and before `/theme.css` (`templates/mock-desktop.html` does). It makes the shared components desktop-sized (36 px buttons and inputs, 14 px text, 44 px rows) unless `<html class="touch">` (tablets), and adds the classes below. Everything from `mock.css` still works: `.card`, `.badge`, `.banner`, `.btn`, `.chip`, `.tabs`, `.segmented`, `.progress`, `.empty`, `.list`, `.input`, icons.
+
+Static mocks can't hover: show a hover with `.hover` (`.nav-item`, `.btn`, `.icon-btn`, `tr`, `.menu-item`, `.split-item`, `.card.link`) and an open menu by putting `.menu` in the page.
+
+Extra variables: `--sidenav-w` (240), `--topbar-h` (56), `--page-max` (1200), `--row-h` (44), `--hover` (a faint tint for hovered rows).
+
+| Class | Example |
+|---|---|
+| `.app` (`.no-nav`) | `<div class="app"><nav class="sidenav">…</nav><div class="main"><header class="topbar">…</header><main class="page">…</main></div></div>`: the shell |
+| `.sidenav`, `.sidenav-brand`, `.logo`, `.nav-section`, `.nav-item` (`.on`, `.hover`), `.nav-end`, `.sidenav-foot`, `.who` | `<a class="nav-item on"><i class="icon i-list"></i>Invoices<span class="count">3</span></a>` |
+| `.topbar`, `.search`, `.kbd`, `.icon-btn` (`.dot` for a badge), `.avatar` (`.sm`, `.lg`, `.l1`, `.l2`), `.avatars` | `<header class="topbar"><div class="search"><i class="icon i-search"></i>Search…<span class="kbd">/</span></div><span class="spacer"></span><span class="avatar sm">LM</span></header>` |
+| `.page` (`.wide`, `.narrow`), `.page-head`, `.breadcrumbs`, `.page-title`, `.page-sub`, `.page-actions` | `<div class="page-head"><div><nav class="breadcrumbs"><a>Billing</a><span>Invoices</span></nav><h1 class="page-title">Invoices</h1></div><div class="page-actions"><button class="btn">New invoice</button></div></div>` |
+| `.section-head`, `.section-title` | a heading row inside a page |
+| `.grid` (`.cols-2`, `.cols-3`, `.cols-4`, `.auto`), `.span-2`, `.span-3`, `.span-all` | `<div class="grid cols-4"><article class="card kpi">…</article>…</div>` |
+| `.card-head`, `.card-title`, `.card.link` | a card's title row |
+| `.kpi`, `.kpi-label`, `.kpi-value`, `.delta` (`.up`, `.down`), `.bars` | `<article class="card kpi"><span class="kpi-label">Overdue</span><span class="kpi-value">€3,150</span><span class="delta down">2 invoices</span></article>`; `<div class="bars"><i style="--v:.4"></i><i class="on" style="--v:.8"></i></div>` |
+| `.table-wrap`, `.table` (`.compact`), `.num`, `.cell-main`, `.cell-sub`, `tr.hover`, `tr.selected`, `th.sorted`, `.table-foot`, `.pager` | `<div class="table-wrap"><table class="table"><thead><tr><th>Client</th><th class="num">Amount</th></tr></thead><tbody><tr><td><span class="cell-main">Café Noisette<span class="cell-sub">Paris</span></span></td><td class="num">€860.50</td></tr></tbody></table></div>` |
+| `.form`, `.form-section` (with a `<header>`), `.form-fields`, `.form-row`, `.fields-2`, `.form-actions` | `<div class="form-row"><label class="label">Client</label><div class="input select">Boulangerie Roux</div></div>` |
+| `.label` (`.opt`), `.help`, `.error-text`, `.input.error`, `.input.disabled`, `.textarea`, `.select`, `.prefix`, `.suffix` | inputs on `mock.css`'s `.input` |
+| `.toggle`, `.checkbox`, `.radio` (`.on`), `.option`, `.option-text` | `<label class="option"><span class="toggle on"></span><span class="option-text">Remind before the due date<span>3 days before</span></span></label>` |
+| `.tabs.line` (`.count` inside a tab), `.toolbar`, `.filter` (`.on`) | `<div class="toolbar"><div class="search">…</div><span class="filter on">Status: <b>Sent</b></span><span class="spacer"></span><button class="btn sm outline">Sort</button></div>` |
+| `.has-menu`, `.menu` (`.left`, `.static`), `.menu-label`, `.menu-item` (`.on`, `.hover`, `.danger`), `.menu-sep`, `.tooltip` | `<div class="has-menu"><button class="btn outline sm">Sort</button><div class="menu"><a class="menu-item on">Due date</a>…</div></div>` |
+| `.modal-backdrop`, `.modal` (`.lg`), `.modal-head`, `.modal-title`, `.modal-body`, `.modal-foot` | last in `<body>`: `<div class="modal-backdrop"><div class="modal">…</div></div>` (covers the page; absolute, not fixed) |
+| `.toast-stack` + `.toast`, `.toast-action` | `<div class="toast-stack"><span class="toast"><i class="icon i-check sm"></i>Sent<span class="toast-action">Undo</span></span></div>`: bottom right |
+| `.split` (`--split-w`), `.split-list`, `.list-head`, `.split-item` (`.on`, `.hover`), `.split-top`, `.split-detail` | a list beside its detail (mail, inbox, clients) |
+| `.empty.boxed` | the kit's `.empty`, in a dashed box, for a page section with nothing in it |
+| `.desc` | `<dl class="desc"><dt>Client since</dt><dd>March 2024</dd></dl>`: label and value pairs |
+| `.only-wide`, `.only-narrow` | shown above or below 600 px wide |
+
+**Responsive.** Under 1100 px a four-column grid becomes two and form sections stack; under 900 px the side nav becomes an icon rail; under 600 px the nav hides, grids are one column, form rows stack, the split view shows one pane, tables scroll and dialogs become bottom sheets. So one desktop mock's markup also reads at a phone's width: for a responsive pair, give the phone state the same markup (or its own `templates/mock.html` layout when the phone design differs).

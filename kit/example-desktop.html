@@ -1,0 +1,192 @@
+<!doctype html>
+<!-- design-driven-development desktop kit gallery: every component of kit/desktop.css (on kit/mock.css) in one
+     web-app page. It doubles as the desktop kit's visual test: render it at 1440 wide, light and dark
+     (?theme=dark), and at 820 and 390 to see the responsive rules. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Desktop kit gallery</title>
+<link rel="stylesheet" href="mock.css">
+<link rel="stylesheet" href="desktop.css">
+<script src="mock.js" defer></script>
+<style>
+  .g-h { font: 700 12px/1 var(--font); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding-top: var(--s4); display: flex; justify-content: space-between; gap: var(--s3); }
+  .g-h code { font: 500 12px var(--mono); letter-spacing: 0; text-transform: none; color: var(--faint); }
+  .g-frame { position: relative; border: 1px dashed var(--border); border-radius: var(--r-lg); overflow: hidden; background: var(--bg); }
+  .g-row { display: flex; gap: var(--s6); align-items: flex-start; flex-wrap: wrap; }
+  .g-col { display: flex; flex-direction: column; gap: var(--s3); }
+</style>
+</head>
+<body>
+<div class="app">
+  <nav class="sidenav">
+    <div class="sidenav-brand"><span class="logo">L</span>Ledgerly</div>
+    <a class="nav-item"><i class="icon i-home"></i>Overview</a>
+    <a class="nav-item on"><i class="icon i-list"></i>Invoices<span class="count">3</span></a>
+    <a class="nav-item hover"><i class="icon i-star"></i>Clients<span class="nav-end">48</span></a>
+    <a class="nav-item"><i class="icon i-flag"></i>Reports</a>
+    <p class="nav-section">Workspace</p>
+    <a class="nav-item"><i class="icon i-link"></i>Integrations</a>
+    <a class="nav-item"><i class="icon i-gear"></i>Settings</a>
+    <div class="sidenav-foot"><span class="avatar">LM</span><div class="who">Léa Martin<span>Owner · Atelier Martin</span></div></div>
+  </nav>
+
+  <div class="main">
+    <header class="topbar">
+      <div class="search"><i class="icon i-search"></i>Search invoices, clients…<span class="kbd">/</span></div>
+      <span class="spacer"></span>
+      <span class="icon-btn hover"><i class="icon i-info"></i></span>
+      <span class="icon-btn"><i class="icon i-sparkle"></i><span class="dot"></span></span>
+      <span class="avatar sm l1">LM</span>
+    </header>
+
+    <main class="page">
+      <div class="page-head">
+        <div>
+          <nav class="breadcrumbs"><a>Atelier Martin</a><a>Billing</a><span>Invoices</span></nav>
+          <h1 class="page-title">Desktop kit</h1>
+          <p class="page-sub">Every desktop component, on the same theme variables as the phone kit. <code>?theme=dark</code> for dark.</p>
+        </div>
+        <div class="page-actions">
+          <button class="btn outline">Export CSV</button>
+          <button class="btn"><i class="icon i-plus sm"></i>New invoice</button>
+        </div>
+      </div>
+
+      <h2 class="g-h">KPIs and cards <code>.grid.cols-4 .card .kpi .delta .bars</code></h2>
+      <div class="grid cols-4">
+        <article class="card kpi"><span class="kpi-label">Outstanding</span><span class="kpi-value">€18,420</span><span class="delta up">12% vs last month</span></article>
+        <article class="card kpi"><span class="kpi-label">Overdue</span><span class="kpi-value">€3,150</span><span class="delta down">2 invoices</span></article>
+        <article class="card kpi"><span class="kpi-label">Paid this month</span><span class="kpi-value">€24,900</span><span class="delta up">31 invoices</span></article>
+        <article class="card kpi"><span class="kpi-label">Average days to pay</span><span class="kpi-value">14.2</span><span class="delta up">1.8 days faster</span></article>
+        <article class="card span-2">
+          <div class="card-head"><p class="card-title">Revenue by month</p><span class="badge soft muted">2026</span></div>
+          <div class="bars"><i style="--v:.42"></i><i style="--v:.55"></i><i style="--v:.48"></i><i style="--v:.62"></i><i style="--v:.7"></i><i style="--v:.66"></i><i style="--v:.81"></i><i style="--v:.74"></i><i style="--v:.9"></i><i class="on" style="--v:.86"></i><i style="--v:.12"></i><i style="--v:.08"></i></div>
+        </article>
+        <article class="card link hover"><p class="card-title">Card, hovered</p><p class="muted">A whole card that links somewhere: <code>.card.link.hover</code>.</p></article>
+        <article class="card flat"><p class="card-title">Flat card</p><p class="muted">Border instead of a shadow.</p></article>
+      </div>
+
+      <h2 class="g-h">Toolbar, filters, tabs <code>.toolbar .filter .tabs.line</code></h2>
+      <div class="tabs line"><span class="on">All<span class="count">31</span></span><span>Drafts<span class="count">4</span></span><span>Sent</span><span>Overdue<span class="count">2</span></span><span>Paid</span></div>
+      <div class="toolbar">
+        <div class="search"><i class="icon i-search"></i>Filter by client</div>
+        <span class="filter on">Status: <b>Sent, Overdue</b></span>
+        <span class="filter"><i class="icon i-plus sm"></i>Due date</span>
+        <span class="filter"><i class="icon i-plus sm"></i>Amount</span>
+        <span class="spacer"></span>
+        <div class="segmented neutral" style="width:auto"><span class="on">List</span><span>Board</span></div>
+        <div class="has-menu">
+          <button class="btn outline sm">Sort: Due date<i class="icon i-down sm"></i></button>
+          <div class="menu">
+            <p class="menu-label">Sort by</p>
+            <a class="menu-item on">Due date</a>
+            <a class="menu-item hover">Amount</a>
+            <a class="menu-item">Client</a>
+            <div class="menu-sep"></div>
+            <a class="menu-item"><i class="icon i-edit"></i>Edit columns<span class="kbd">E</span></a>
+            <a class="menu-item danger"><i class="icon i-close"></i>Clear filters</a>
+          </div>
+        </div>
+      </div>
+
+      <h2 class="g-h">Data table <code>.table-wrap .table .num tr.hover tr.selected .table-foot .pager</code></h2>
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th style="width:36px"><span class="checkbox"></span></th><th>Invoice</th><th>Client</th><th class="sorted">Due</th><th>Status</th><th class="num">Amount</th><th></th></tr></thead>
+          <tbody>
+            <tr><td><span class="checkbox"></span></td><td><span class="cell-main">INV-2041<span class="cell-sub"></span></span></td><td><span class="cell-main"><span class="avatar sm l2">BR</span><span>Boulangerie Roux<span class="cell-sub">Lyon</span></span></span></td><td>Nov 12</td><td><span class="badge soft danger">Overdue</span></td><td class="num">€1,240.00</td><td class="num"><i class="icon i-more sm muted"></i></td></tr>
+            <tr class="hover"><td><span class="checkbox"></span></td><td><span class="cell-main">INV-2042</span></td><td><span class="cell-main"><span class="avatar sm l1">CN</span><span>Café Noisette<span class="cell-sub">Paris 11e</span></span></span></td><td>Nov 18</td><td><span class="badge soft">Sent</span></td><td class="num">€860.50</td><td class="num"><i class="icon i-more sm muted"></i></td></tr>
+            <tr class="selected"><td><span class="checkbox on"></span></td><td><span class="cell-main">INV-2043</span></td><td><span class="cell-main"><span class="avatar sm">ÉM</span><span>Éditions Martel<span class="cell-sub">Bordeaux</span></span></span></td><td>Nov 30</td><td><span class="badge soft muted">Draft</span></td><td class="num">€4,320.00</td><td class="num"><i class="icon i-more sm muted"></i></td></tr>
+            <tr><td><span class="checkbox"></span></td><td><span class="cell-main">INV-2038</span></td><td><span class="cell-main"><span class="avatar sm l2">FV</span><span>Fromagerie Vidal<span class="cell-sub">Annecy</span></span></span></td><td>Oct 28</td><td><span class="badge soft success">Paid</span></td><td class="num">€612.00</td><td class="num"><i class="icon i-more sm muted"></i></td></tr>
+          </tbody>
+        </table>
+        <div class="table-foot"><span>1 selected · 4 of 31 invoices</span><div class="pager"><span>‹</span><span class="on">1</span><span>2</span><span>3</span><span>›</span></div></div>
+      </div>
+
+      <h2 class="g-h">Form <code>.form-section .form-row .label .input .select .textarea .toggle .checkbox .radio .option</code></h2>
+      <article class="card">
+        <div class="form">
+          <section class="form-section">
+            <header><p class="section-title">Invoice details</p><p>What the client sees at the top of the invoice.</p></header>
+            <div class="form-fields">
+              <div class="form-row"><label class="label">Client</label><div class="input select">Boulangerie Roux</div></div>
+              <div class="form-row"><label class="label">Reference <span class="opt">(optional)</span></label><div class="input focus">PO-7781</div></div>
+              <div class="form-row"><label class="label">Amount</label><div class="stack tight"><div class="input error"><span class="prefix">€</span>12,40,00</div><span class="error-text">Enter an amount like 1,240.00</span></div></div>
+              <div class="form-row"><label class="label">Due</label><div class="fields-2"><div class="input select">Net 30</div><div class="input disabled">Dec 12, 2026</div></div></div>
+              <div class="form-row"><label class="label">Note</label><div class="stack tight"><div class="input textarea placeholder">Thank you for your business…</div><span class="help">Shown under the line items.</span></div></div>
+            </div>
+          </section>
+          <section class="form-section">
+            <header><p class="section-title">Reminders</p><p>Ledgerly emails the client for you.</p></header>
+            <div class="form-fields">
+              <label class="option"><span class="toggle on"></span><span class="option-text">Remind before the due date<span>3 days before, at 9:00 their time</span></span></label>
+              <label class="option"><span class="toggle"></span><span class="option-text">Remind when overdue<span>Every 7 days until paid</span></span></label>
+              <label class="option"><span class="checkbox on"></span><span class="option-text">Attach the PDF</span></label>
+              <label class="option"><span class="radio on"></span><span class="option-text">Send from billing@ateliermartin.fr</span></label>
+              <label class="option"><span class="radio"></span><span class="option-text">Send from Ledgerly</span></label>
+            </div>
+          </section>
+          <div class="form-actions"><button class="btn ghost">Cancel</button><button class="btn outline">Save draft</button><button class="btn">Send invoice</button></div>
+        </div>
+      </article>
+
+      <h2 class="g-h">Buttons and states <code>.btn .outline .ghost .secondary .danger .sm .hover</code></h2>
+      <div class="g-row">
+        <button class="btn">Primary</button>
+        <button class="btn hover">Primary, hovered</button>
+        <button class="btn outline">Outline</button>
+        <button class="btn outline hover">Outline, hovered</button>
+        <button class="btn ghost">Ghost</button>
+        <button class="btn ghost hover">Ghost, hovered</button>
+        <button class="btn secondary">Secondary</button>
+        <button class="btn danger">Delete</button>
+        <button class="btn sm">Small</button>
+        <button class="btn" disabled>Disabled</button>
+        <span class="g-col" style="position:relative;padding-top:34px"><span class="tooltip" style="top:0;left:-8px">Copy link · ⌘L</span><span class="icon-btn hover"><i class="icon i-link"></i></span></span>
+      </div>
+
+      <h2 class="g-h">Split view <code>.split .split-list .split-item .split-detail .desc</code></h2>
+      <div class="g-frame">
+        <div class="split" style="min-height:360px">
+          <div class="split-list">
+            <div class="list-head"><span class="headline">Clients</span><button class="btn sm outline">Add</button></div>
+            <div class="split-item on"><div class="split-top">Boulangerie Roux<span>€1,240 due</span></div><p>Overdue since Nov 12 · 2 reminders sent</p></div>
+            <div class="split-item hover"><div class="split-top">Café Noisette<span>€860 due</span></div><p>Sent Nov 4 · opened twice</p></div>
+            <div class="split-item"><div class="split-top">Éditions Martel<span>Draft</span></div><p>Quarterly retainer, Q4</p></div>
+          </div>
+          <div class="split-detail">
+            <div class="hstack between"><div class="hstack"><span class="avatar lg l2">BR</span><div class="stack tight"><p class="title">Boulangerie Roux</p><p class="muted">Claire Roux · claire@boulangerieroux.fr</p></div></div><button class="btn outline">Send reminder</button></div>
+            <dl class="desc"><dt>Outstanding</dt><dd>€1,240.00 (1 invoice)</dd><dt>Client since</dt><dd>March 2024</dd><dt>Pays in</dt><dd>21 days on average</dd></dl>
+            <div class="banner warning"><i class="icon i-warn"></i><span><b>Overdue.</b> <span class="banner-text">INV-2041 was due on Nov 12.</span></span></div>
+          </div>
+        </div>
+      </div>
+
+      <h2 class="g-h">Modal dialog and toasts <code>.modal-backdrop .modal .toast-stack .toast</code></h2>
+      <div class="g-frame" style="height:380px">
+        <div class="modal-backdrop" style="padding-top:40px">
+          <div class="modal">
+            <div class="modal-head"><p class="modal-title">Delete INV-2043?</p><span class="icon-btn"><i class="icon i-close"></i></span></div>
+            <div class="modal-body"><p class="text">The draft for Éditions Martel (€4,320.00) is deleted for everyone. Sent invoices aren't affected.</p><label class="option"><span class="checkbox"></span><span class="option-text">Also delete its 2 attachments</span></label></div>
+            <div class="modal-foot"><button class="btn ghost">Cancel</button><button class="btn danger">Delete draft</button></div>
+          </div>
+        </div>
+        <div class="toast-stack">
+          <span class="toast"><i class="icon i-check sm"></i>INV-2042 sent to Café Noisette<span class="toast-action">Undo</span></span>
+        </div>
+      </div>
+
+      <h2 class="g-h">Empty state <code>.empty.boxed</code></h2>
+      <div class="empty boxed">
+        <div class="empty-icon"><i class="icon i-list"></i></div>
+        <p class="empty-title">No overdue invoices</p>
+        <p class="empty-text">Everything sent has been paid on time. Overdue invoices show up here, with a button to remind the client.</p>
+        <button class="btn outline">View all invoices</button>
+      </div>
+    </main>
+  </div>
+</div>
+</body>
+</html>
