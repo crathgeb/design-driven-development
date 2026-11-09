@@ -4,7 +4,7 @@
   "private": true,
   "description": "Rapid UX iteration with Claude: HTML mocks of every screen state on a board you mark up in the browser; background workers revise them; the result is exported as a spec.",
   "license": "MIT",
-  "author": "TechSnack LLC",
+  "author": "Chris Rathgeb",
   "homepage": "https://github.com/crathgeb/design-driven-development",
   "repository": {
     "type": "git",

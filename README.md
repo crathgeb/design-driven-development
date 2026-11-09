@@ -131,4 +131,4 @@ Before 0.2.0 this plugin was called design-first-spec. Projects in `~/.design-fi
 
 ## License
 
-MIT, © 2026 TechSnack LLC. See [`LICENSE`](LICENSE).
+MIT, © 2026 Chris Rathgeb. See [`LICENSE`](LICENSE).
