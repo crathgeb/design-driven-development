@@ -9,7 +9,7 @@ Claude writes HTML mocks of every screen and state onto a board in your browser;
 
 ## What it does
 
-Describe what you want ("let's design how onboarding works", "mock up the settings screen"). Claude writes **mocks**: static HTML screens, one file per **state**, with realistic sample data in your product's language and look. They're laid out on a **board**, every flow, screen and state side by side, each with Claude's **intent** beside it: why it looks like this and what it decides.
+Describe what you want ("let's design how onboarding works", "mock up the settings screen"). Claude writes **mocks**: static HTML screens for the product's **device** (a phone, a tablet, a desktop web app, or any size), one file per **state**, with realistic sample data in your product's language and look. They're laid out on a **board**, every flow, screen and state side by side, each with Claude's **intent** beside it: why it looks like this and what it decides.
 
 You mark them up:
 - **draw** pins, boxes, ellipses, arrows and freehand on any state, each with a note;
@@ -49,13 +49,36 @@ or just ask: "mock up the settings screen", "let's design the checkout experienc
 
 If the session ends, nothing is lost: marks save as you make them, and jobs you send wait until Claude connects again.
 
+## Devices: phone, tablet, desktop, or any size
+
+![A web app's board: desktop states in browser windows, and a screen with a desktop and a phone state side by side](docs/screenshot-desktop.png)
+
+Each project is designed for a **device**, which Claude picks from the product (a web app or dashboard → desktop; an iOS or Android app → phone) and asks about only when it's unclear:
+
+| Device | Size (CSS pixels) | On the board |
+|---|---|---|
+| `phone` | 390×844 | a rounded phone screen |
+| `tablet` | 820×1180 | a squarer screen |
+| `laptop` | 1280×800 | a browser window |
+| `desktop` | 1440×900 | a browser window |
+| `WxH`, e.g. `1920x1080` | any size from 200 to 4000 | a plain frame |
+
+Any screen or state can have its own device, so one board holds a **responsive design**: a screen with a desktop state and a phone state side by side. A state's device beats its screen's, which beats the project's. Frames are scaled to sit tidily together on the board; the focus view fits any size, zooms (Fit, −, +, 100%), and your marks stay on what they point at at any size.
+
+```bash
+node scripts/ddd.mjs init "Billing" --device desktop          # or phone, tablet, laptop, 1366x768
+node scripts/ddd.mjs set-device billing laptop                # change the project's default
+node scripts/board.mjs billing add-state --screen overview --id phone --title "On a phone" --device phone
+node scripts/board.mjs billing update --screen overview --state phone --device inherit   # back to the default
+```
+
 ## Whole-app and flow requests, and the theme
 
 The sidebar (`[` to hide it) lists every flow and its screens, with open marks and work in progress on each. Its **Whole app** item opens a panel for requests that apply to every screen or to one flow, and for the **design direction**: your note on brand, tone, type and colour, carried by every such request.
 
 A whole-app or flow request is one job that has its screens to itself: it waits for screen jobs running on them, and screen jobs sent after it wait for it. Its worker changes the project's **`theme.css`** first, then only the mocks that must change.
 
-Every mock is built from a small iOS-style **kit** (`kit/mock.css`: status and nav bars, cards, decks, lists, chips, buttons, segmented controls, banners, sheets, a keyboard, light and dark), so screens from different workers look like one app. Each project restyles the kit in its own `theme.css` (kit variables: colours, fonts, radii), loaded by every mock after the kit, so one change rebrands every screen; mocks never hard-code the brand. `kit/README.md` lists every class; `kit/example.html` shows them all.
+Every mock is built from a small **kit**, so screens from different workers look like one app: `kit/mock.css` for touch screens (status and nav bars, cards, decks, lists, chips, buttons, segmented controls, banners, sheets, a keyboard) and `kit/desktop.css` for web apps (an app shell with a side nav and top bar, page headers with breadcrumbs, grids, data tables, forms, toggles, tabs, toolbars, menus, dialogs, toasts, a split view, responsive down to a phone), light and dark. Each project restyles the kit in its own `theme.css` (kit variables: colours, fonts, radii), loaded by every mock after the kit, so one change rebrands every screen; mocks never hard-code the brand. `kit/README.md` lists every class; `kit/example.html` and `kit/example-desktop.html` show them all.
 
 ## Export
 
@@ -65,7 +88,7 @@ Every mock is built from a small iOS-style **kit** (`kit/mock.css`: status and n
 index.html     the board, read-only, opens from disk
 mocks/  kit/   every state, and the kit they use
 theme.css      the project's brand
-screens/       a PNG per state (with playwright-core)
+screens/       a PNG per state, at its device's size (with playwright-core)
 board.json     flows, screens, states and their intent
 notes.json     your notes and marks
 spec.md        the experience in words, decisions settled, open questions (written by Claude)
@@ -79,7 +102,7 @@ Projects live outside your repo until you export them:
 
 ```
 ~/.design-driven-development/projects/<repo>/<slug>/     ($DDD_HOME replaces ~/.design-driven-development)
-  project.json   name, goal, product repo
+  project.json   name, goal, product repo, device
   theme.css      the brand: kit variable overrides for every mock
   board.json     flows → screens → states, with intent
   notes.json     your notes, design direction, marks and asks
@@ -118,12 +141,12 @@ Projects live outside your repo until you export them:
 The skill drives these; you rarely need them yourself.
 
 ```bash
-node scripts/ddd.mjs init "<name>" [--goal "…"] | serve <project> | list | path <slug>
-node scripts/board.mjs <project> show | add-flow | add-screen | add-state | update | move | remove-state | remove-screen | remove-flow
+node scripts/ddd.mjs init "<name>" [--goal "…"] [--device <device>] | set-device <project> <device> | serve <project> | list | path <slug>
+node scripts/board.mjs <project> show | add-flow | add-screen | add-state | update | move | remove-state | remove-screen | remove-flow   # --device on add-screen, add-state, update
 node scripts/listen.mjs <project>                       # Claude's listener, under the Monitor tool
 node scripts/listen.mjs <project> --state working --message "Updating 2 screens"
 node scripts/job.mjs <project> start | done | fail <job-id>
-node scripts/shoot.mjs <project>                        # PNG of every state
+node scripts/shoot.mjs <project>                        # PNG of every state, at its device's size
 node scripts/export.mjs <project> [--out <dir>]
 ```
 

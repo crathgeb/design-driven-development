@@ -6,7 +6,7 @@ argument-hint: "<name of the experience>"
 
 # Design-Driven Development
 
-Design an experience that doesn't exist yet, as **mocks**: static HTML screens, one file per **state**, with real sample data, laid out on a **board** (flows → screens → states) in the browser. The author draws and pins notes on them and presses **Send to Claude**; you hand each screen's marks to a background subagent, and the board reloads as mocks change. When the experience is right, you **export** it into the product repo as a spec. Building it is a later session.
+Design an experience that doesn't exist yet, as **mocks**: static HTML screens (for a phone, a tablet, a desktop browser, or any size), one file per **state**, with real sample data, laid out on a **board** (flows → screens → states) in the browser. The author draws and pins notes on them and presses **Send to Claude**; you hand each screen's marks to a background subagent, and the board reloads as mocks change. When the experience is right, you **export** it into the product repo as a spec. Building it is a later session.
 
 The contract (vocabulary, file formats, server API) is `${CLAUDE_PLUGIN_ROOT}/docs/design.md`. How to write a mock is `${CLAUDE_PLUGIN_ROOT}/skills/design-driven-development/authoring.md`: read it before you write or delegate any mock.
 
@@ -16,7 +16,9 @@ Scripts are in `${CLAUDE_PLUGIN_ROOT}/scripts/`. `<project>` below is the projec
 
 When run as `/design-driven-development <name>`: if this repo has a project with that name, resume it; otherwise start one. With no name, list this repo's projects and ask which to open (or what to design).
 
-- **New:** `node "${CLAUDE_PLUGIN_ROOT}/scripts/ddd.mjs" init "<name>" --goal "<the design question, one line>"`. It prints the project folder (`~/.design-driven-development/projects/<repo>/<slug>/`). Name the project after the question ("Threads for broad Questions"), not the feature. If it prints a note about `~/.design-first-spec` (the plugin's old name), pass it on to the author once.
+- **Decide the device** before you create it, from the product, not by habit: a web app, dashboard, admin tool or marketing site → `desktop` (1440×900; `laptop` 1280×800 when the product targets smaller laptops); an iOS or Android app → `phone`; an iPad app → `tablet`; a kiosk, TV or embedded screen → its size (`1920x1080`). Look at the repo (React Native/Expo/Swift/Kotlin → phone; a web framework with pages and layouts → desktop). Ask only if it's genuinely unclear (a web app used mostly on phones?), in the same message as your other questions.
+- **New:** `node "${CLAUDE_PLUGIN_ROOT}/scripts/ddd.mjs" init "<name>" --goal "<the design question, one line>" --device <desktop|laptop|tablet|phone|WxH>`. It prints the project folder (`~/.design-driven-development/projects/<repo>/<slug>/`). Name the project after the question ("Threads for broad Questions"), not the feature. If it prints a note about `~/.design-first-spec` (the plugin's old name), pass it on to the author once. To change the device later: `ddd.mjs set-device <project> <device>`.
+- **Responsive designs:** keep the project's device for most states and give a screen or a state its own: `board.mjs add-state --screen overview --id phone --title "On a phone" --device phone`. A state's device beats its screen's, which beats the project's.
 - **Resume:** `ddd.mjs list` shows this repo's projects; `ddd.mjs path <slug>` prints one's folder. Read its `board.json` and `notes.json`, then go to step 4. Don't re-author a board that exists.
 
 ## 2. Understand the experience
@@ -39,12 +41,13 @@ Ask only what blocks the first board, in one short message. Everything else, dec
    $B add-flow --id build-thread --title "Build a Thread" --intent "Why this flow exists."
    $B add-screen --flow build-thread --id thread-composer --title "Thread composer" --intent "What it's for and the key choice."
    $B add-state --screen thread-composer --id empty --title "No pieces yet" --intent "Why this state looks this way."
+   $B add-state --screen thread-composer --id on-phone --title "On a phone" --device phone --intent "…"   # only for another device than the project's
    $B show
    ```
    Every flow, screen and state gets an **intent**: the why, and what it decides. It's what the author reads beside the mock and what export turns into the spec.
-4. **Write the mocks**, one file per state at `mocks/<screen-id>--<state-id>.html`, from `${CLAUDE_PLUGIN_ROOT}/templates/mock.html` and the kit (`${CLAUDE_PLUGIN_ROOT}/kit/README.md`).
-   - **Big boards** (more than about 6 states): start a background subagent per screen, all at once. Brief each with the project folder, its screen and states with their intents, the cast, the path of `theme.css` (use its variables, don't edit it), and "Follow `<abs path>/authoring.md`. Write only these files. End with `SUMMARY:`". Write one screen yourself first if you can, so workers have a model to match.
-5. **Look at them.** `node "${CLAUDE_PLUGIN_ROOT}/scripts/shoot.mjs" <project>` writes a PNG of each state (needs playwright-core; it says so if it's missing). Read the PNGs and fix what's off: overflow past 844, clipped text, a state that doesn't show what its intent says, sample data that disagrees between screens.
+4. **Write the mocks**, one file per state at `mocks/<screen-id>--<state-id>.html`, from the template for the state's device and the kit (`${CLAUDE_PLUGIN_ROOT}/kit/README.md`): `templates/mock.html` for a phone, `templates/mock-tablet.html` for a tablet, `templates/mock-desktop.html` for a laptop or desktop (it links `kit/desktop.css`: app shell, tables, forms, menus, dialogs).
+   - **Big boards** (more than about 6 states): start a background subagent per screen, all at once. Brief each with the project folder, its screen and states with their intents and devices (size and template), the cast, the path of `theme.css` (use its variables, don't edit it), and "Follow `<abs path>/authoring.md`. Write only these files. End with `SUMMARY:`". Write one screen yourself first if you can, so workers have a model to match.
+5. **Look at them.** `node "${CLAUDE_PLUGIN_ROOT}/scripts/shoot.mjs" <project>` writes a PNG of each state (needs playwright-core; it says so if it's missing). Each PNG is the state's device viewport. Read them and fix what's off: overflow past the device's width or important content below its height, clipped text, a desktop page that's a stretched phone layout, a state that doesn't show what its intent says, sample data that disagrees between screens.
 
 ## 4. Serve and connect
 
