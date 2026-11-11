@@ -454,30 +454,38 @@ body.fullscreen .stage-head, body.fullscreen .strip, body.fullscreen .panel { di
 body.fullscreen .focus { inset: 0; z-index: 40; grid-template-columns: minmax(0, 1fr); }
 body.fullscreen .stage { grid-template-rows: minmax(0, 1fr); }
 body.fullscreen .stage-body { padding: 16px; }
-.fs-bar { position: fixed; z-index: 45; left: 50%; bottom: 16px; transform: translateX(-50%); max-width: calc(100vw - 24px); }
-.fs-bar.moved { transform: none; bottom: auto; }
+/* A vertical strip, docked at the left edge, centred top to bottom. */
+.fs-bar { position: fixed; z-index: 45; left: 16px; top: 50%; transform: translateY(-50%); max-height: calc(100vh - 24px); }
+.fs-bar.moved { transform: none; }
 .fs-row {
-  display: flex; align-items: center; gap: 4px; padding: 5px 6px; border-radius: 12px;
+  display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 5px; border-radius: 12px;
   background: color-mix(in srgb, var(--surface) 94%, transparent); box-shadow: var(--pop-shadow);
   backdrop-filter: saturate(1.4) blur(12px); -webkit-backdrop-filter: saturate(1.4) blur(12px);
 }
-.fs-grip { width: 22px; height: 30px; flex: none; border: 0; border-radius: 6px; background: transparent; color: var(--faint); cursor: grab; display: grid; place-items: center; touch-action: none; }
+.fs-grip { width: 32px; height: 20px; flex: none; border: 0; border-radius: 6px; background: transparent; color: var(--faint); cursor: grab; display: grid; place-items: center; touch-action: none; }
 .fs-grip:hover { background: var(--sunken); color: var(--text); }
 .fs-bar.dragging .fs-grip { cursor: grabbing; }
-.fs-title { font-size: 13px; font-weight: 600; padding: 0 6px 0 2px; max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.fs-sep { width: 1px; height: 20px; background: var(--line); margin: 0 4px; flex: none; }
-.fs-tools { display: flex; gap: 2px; }
+.fs-sep { width: 20px; height: 1px; background: var(--line); margin: 3px 0; flex: none; }
+.fs-tools { display: flex; flex-direction: column; gap: 2px; }
 .fs-tools button { width: 32px; height: 32px; border-radius: 8px; border: 0; background: transparent; color: var(--muted); display: grid; place-items: center; cursor: pointer; }
 .fs-tools button:hover { background: var(--sunken); color: var(--text); }
 .fs-tools button[aria-pressed='true'] { background: var(--primary); color: var(--on-primary); }
-.fs-count { font-size: 12.5px; color: var(--muted); padding: 0 6px; white-space: nowrap; font-variant-numeric: tabular-nums; }
-/* The selected mark's note: a card on top of the toolbar (under it when the toolbar sits in the top half), so the toolbar never moves. */
+.fs-btn { position: relative; width: 32px; height: 32px; border-radius: 8px; border: 0; background: transparent; color: var(--muted); display: grid; place-items: center; cursor: pointer; }
+.fs-btn:hover { background: var(--sunken); color: var(--text); }
+.fs-send:not(:disabled) { background: var(--primary); color: var(--on-primary); }
+.fs-send:not(:disabled):hover { opacity: 0.88; background: var(--primary); color: var(--on-primary); }
+.fs-send:disabled { opacity: 0.4; cursor: default; }
+.fs-count {
+  position: absolute; top: -6px; right: -6px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; display: grid; place-items: center;
+  font-size: 10.5px; font-weight: 700; color: #fff; background: var(--mark); box-shadow: 0 0 0 2px var(--surface); font-variant-numeric: tabular-nums;
+}
+/* The selected mark's note: a card beside the toolbar (on its left when the toolbar sits in the right half), so the toolbar never moves. */
 .fs-note {
-  position: absolute; left: 50%; bottom: calc(100% + 6px); transform: translateX(-50%);
+  position: absolute; left: calc(100% + 8px); top: 50%; transform: translateY(-50%);
   display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 12px;
   border-radius: 12px; background: var(--surface); box-shadow: var(--pop-shadow); width: min(420px, calc(100vw - 24px));
 }
-.fs-bar.below .fs-note { bottom: auto; top: calc(100% + 6px); }
+.fs-bar.flip .fs-note { left: auto; right: calc(100% + 8px); }
 .fs-note .n { width: 22px; height: 22px; border-radius: 50%; background: var(--mark); color: #fff; display: grid; place-items: center; font-size: 11.5px; font-weight: 700; }
 .fs-note.sent .n { background: var(--sent); }
 .fs-note.done .n { background: var(--done); }

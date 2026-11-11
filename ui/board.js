@@ -65,7 +65,7 @@
     stageZoom: store.get('stageZoom', 'fit'), // 'fit' or a scale for the focus view
     focus: null, // { screen, state }
     full: false, // the focus view is full screen: just the state and the floating toolbar
-    fsBar: store.get('fsBar', null), // where the author left the full-screen toolbar ({ x, y }), or null: docked
+    fsBar: store.get('fsBarV', null), // where the author left the full-screen toolbar ({ x, y }), or null: docked
     tool: 'select',
     hot: null, // selected mark id
     sig: '',
@@ -742,8 +742,10 @@
     $('#p-screen-intent').textContent = d.screen.intent || '';
     $('#p-state-name').textContent = `· ${d.state.title || d.state.id}`;
     $('#p-state-intent').textContent = d.state.intent || '';
+    // The vertical toolbar has no room for a title: its grip's tooltip says which state this is.
+    const pos = states.length > 1 ? ` (${states.findIndex((s) => s.id === d.state.id) + 1} of ${states.length}, ← → to move)` : '';
     $('#fs-title').textContent = `${d.screen.title || d.screen.id} · ${d.state.title || d.state.id}`;
-    $('#fs-title').title = states.length > 1 ? `${states.findIndex((s) => s.id === d.state.id) + 1} of ${states.length} · ← → to move` : '';
+    $('#fs-grip').title = `${$('#fs-title').textContent}${pos}\nDrag to move · double-click to dock`;
   }
 
   function renderStrip() {
@@ -1078,9 +1080,10 @@
     if (!S.full || !S.focus) return;
     const { screen, state } = S.focus;
     const open = screenOpenCount(screen);
-    $('#fs-count').textContent = open ? `${open} to send` : 'Nothing to send';
+    $('#fs-count').textContent = open;
+    $('#fs-count').hidden = !open;
     $('#fs-send').disabled = !open;
-    $('#fs-send').textContent = open ? `Send to Claude (${open})` : 'Send to Claude';
+    $('#fs-send').title = open ? `Send this screen to Claude (${open})` : 'Nothing to send on this screen';
     const m = S.hot ? marksOf(screen, state).find((x) => x.id === S.hot) : null;
     const card = $('#fs-note');
     card.hidden = !m;
@@ -1103,7 +1106,7 @@
   function placeFsBar() {
     const bar = $('#fs-bar');
     if (!S.fsBar) {
-      bar.classList.remove('moved', 'below');
+      bar.classList.remove('moved', 'flip');
       bar.style.left = bar.style.top = '';
       return;
     }
@@ -1111,7 +1114,7 @@
     const x = Math.max(8, Math.min(innerWidth - r.width - 8, S.fsBar.x));
     const y = Math.max(8, Math.min(innerHeight - r.height - 8, S.fsBar.y));
     bar.classList.add('moved');
-    bar.classList.toggle('below', y + r.height / 2 < innerHeight / 2); // in the top half, the note card opens under the toolbar
+    bar.classList.toggle('flip', x + r.width / 2 > innerWidth / 2); // in the right half, the note card opens on its left
     bar.style.left = `${x}px`;
     bar.style.top = `${y}px`;
   }
@@ -1159,13 +1162,13 @@
       if (!drag) return;
       drag = null;
       bar.classList.remove('dragging');
-      store.set('fsBar', S.fsBar);
+      store.set('fsBarV', S.fsBar);
     };
     grip.addEventListener('pointerup', drop);
     grip.addEventListener('pointercancel', drop);
     grip.addEventListener('dblclick', () => {
       S.fsBar = null;
-      store.set('fsBar', null);
+      store.set('fsBarV', null);
       placeFsBar();
     });
     addEventListener('resize', () => S.full && placeFsBar());
