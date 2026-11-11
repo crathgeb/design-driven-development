@@ -1,6 +1,6 @@
 {
   "name": "design-driven-development",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "description": "Rapid UX iteration with Claude: HTML mocks of every screen state on a board you mark up in the browser; background workers revise them; the result is exported as a spec.",
   "license": "MIT",
