@@ -497,8 +497,10 @@ body.fullscreen .stage-body { padding: 16px; }
 .fs-note.sent .n { background: var(--sent); }
 .fs-note.done .n { background: var(--done); }
 .fs-note-close { position: absolute; top: 6px; right: 6px; }
+.fs-note-del { position: absolute; top: 6px; right: 32px; }
+.fs-note-del:hover { color: var(--mark); background: var(--mark-soft); }
 .fs-note-hint { margin: 5px 0 0; font-size: 11.5px; color: var(--faint); }
-.fs-note-head { margin: 0 26px 6px 0; font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fs-note-head { margin: 0 52px 6px 0; font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .fs-note textarea { min-height: 34px; resize: none; overflow: hidden; }
 .fs-note-text { margin: 0; font-size: 13.5px; white-space: pre-wrap; }
 

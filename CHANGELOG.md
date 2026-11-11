@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- **Full screen:** a mark's note card no longer stays open. It folds into the toolbar when you're done (Enter, its ×, or clicking elsewhere), and the toolbar's note button, with the count of marks on the state, shows it again.
+- **Full screen:** a mark's note card no longer stays open. It folds into the toolbar when you're done (Enter, its ×, or clicking elsewhere), and the toolbar's note button, with the count of marks on the state, shows it again. Its trash button deletes the mark if you change your mind before sending.
 
 ## 0.4.0 (2026-11-10): full screen, export from the board
 

@@ -1101,6 +1101,7 @@
     card.className = `fs-note ${status}`;
     $('#fs-note-n').textContent = m.n;
     $('#fs-note-head').textContent = [SHAPES[m.shape] || 'Mark', { open: 'Open', sent: 'With Claude', done: 'Done' }[status], m.target?.text ? `“${m.target.text}”` : ''].filter(Boolean).join(' · ');
+    $('#fs-note-del').hidden = READ_ONLY || status === 'sent'; // as in the panel: not while Claude has it
     const t = $('#fs-note-text');
     const editable = !READ_ONLY && status === 'open';
     t.hidden = !editable;
@@ -1155,6 +1156,7 @@
     $('#fs-notes').addEventListener('pointerdown', (e) => e.preventDefault()); // keep focus in the note, so the click toggles it
     $('#fs-notes').addEventListener('click', () => showFsNote(!(S.fsNote && S.hot)));
     $('#fs-note-close').addEventListener('click', () => showFsNote(false));
+    $('#fs-note-del').addEventListener('click', () => S.hot && deleteMark(S.hot));
     // Done writing: Enter (Shift+Enter is a new line), or focus leaving the card, folds it into the toolbar.
     $('#fs-note-text').addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
