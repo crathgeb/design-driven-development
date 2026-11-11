@@ -914,7 +914,7 @@
     }
     // The list, keeping the caret if the author is typing in one of its notes.
     const active = document.activeElement;
-    const keep = active?.closest?.('.mark') ? { id: active.closest('.mark').dataset.id, pos: active.selectionStart } : null;
+    const keep = active?.closest?.('.mark') ? { id: active.closest('.mark').dataset.id, pos: active.selectionStart, list: active.closest('ol, .resolved, .fs-note')?.closest('#fs-note') ? '#fs-list' : '.panel' } : null;
     const live = marks.filter((m) => m.status !== 'done');
     const done = marks.filter((m) => m.status === 'done');
     const list = $('#marks');
@@ -922,18 +922,21 @@
     for (const m of live) list.append(markItem(m));
     $('#marks-done').textContent = '';
     for (const m of done) $('#marks-done').append(markItem(m));
+    // Full screen's list: every mark, open ones first.
+    $('#fs-list').textContent = '';
+    for (const m of [...live, ...done]) $('#fs-list').append(markItem(m));
     $('#resolved').hidden = !done.length;
     $('#resolved-count').textContent = `(${done.length})`;
     $('#marks-count').textContent = live.length ? `· ${live.length}` : '';
     $('#marks-empty').hidden = !!marks.length || READ_ONLY;
     if (keep) {
-      const t = $(`.mark[data-id="${CSS.escape(keep.id)}"] textarea`);
+      const t = $(`${keep.list} .mark[data-id="${CSS.escape(keep.id)}"] textarea`);
       if (t) {
         t.focus();
         t.setSelectionRange(keep.pos, keep.pos);
       }
     }
-    $$('#marks textarea').forEach(autosize);
+    $$('#marks textarea, #fs-list textarea').forEach(autosize);
     paintCounts();
   }
 
@@ -982,14 +985,14 @@
 
   function selectMark(id, fromCanvas) {
     S.hot = id;
-    $$('#marks .mark, #marks-done .mark').forEach((li) => li.classList.toggle('hot', li.dataset.id === id));
+    $$('#marks .mark, #marks-done .mark, #fs-list .mark').forEach((li) => li.classList.toggle('hot', li.dataset.id === id));
     stage?.marksG.querySelectorAll('.mk').forEach((g) => g.classList.toggle('hot', g.dataset.id === id));
-    const li = $(`.mark[data-id="${CSS.escape(id)}"]`);
+    if (S.full && fromCanvas && id) S.fsNote = true;
+    paintFs();
+    const li = $(`${S.full ? '#fs-list' : '.panel'} .mark[data-id="${CSS.escape(id)}"]`);
     if (li?.closest('details')) li.closest('details').open = true;
     li?.scrollIntoView({ block: 'nearest' });
-    if (S.full) S.fsNote = !!id && (fromCanvas || S.fsNote);
-    paintFs();
-    if (fromCanvas) (S.full ? $('#fs-note-text:not([hidden])') : li?.querySelector('textarea'))?.focus();
+    if (fromCanvas) li?.querySelector('textarea')?.focus();
     else {
       // Bring the mark into view in the mock.
       const m = marksOf(S.focus.screen, S.focus.state).find((x) => x.id === id);
@@ -1041,7 +1044,7 @@
     save();
     setTool('select');
     renderMarks();
-    const t = S.full ? $('#fs-note-text') : $(`.mark[data-id="${CSS.escape(m.id)}"] textarea`);
+    const t = $(`${S.full ? '#fs-list' : '.panel'} .mark[data-id="${CSS.escape(m.id)}"] textarea`);
     t?.focus();
     t?.scrollIntoView({ block: 'nearest' });
     return m;
@@ -1074,7 +1077,7 @@
       closeApp();
       placeFsBar();
     }
-    paintFs();
+    renderMarks(); // the panel's list and the full-screen one share the notes: bring the other up to date
     resizeStage();
   }
 
@@ -1088,28 +1091,14 @@
     $('#fs-send').disabled = !open;
     $('#fs-send').title = open ? `Send this screen to Claude (${open})` : 'Nothing to send on this screen';
     const marks = marksOf(screen, state);
-    const m = S.hot ? marks.find((x) => x.id === S.hot) : null;
     $('#fs-marks').textContent = marks.length;
     $('#fs-marks').hidden = !marks.length;
     $('#fs-notes').disabled = !marks.length;
-    $('#fs-notes').title = !marks.length ? 'No marks on this state yet' : S.fsNote && m ? 'Fold the note away' : `Show ${m ? `mark ${m.n}'s note` : 'the latest note'} (${plural(marks.length, 'mark')} on this state)`;
-    $('#fs-notes').setAttribute('aria-pressed', String(!!(S.fsNote && m)));
-    const card = $('#fs-note');
-    card.hidden = !(m && S.fsNote);
-    if (card.hidden) return;
-    const status = m.status || 'open';
-    card.className = `fs-note ${status}`;
-    $('#fs-note-n').textContent = m.n;
-    $('#fs-note-head').textContent = [SHAPES[m.shape] || 'Mark', { open: 'Open', sent: 'With Claude', done: 'Done' }[status], m.target?.text ? `“${m.target.text}”` : ''].filter(Boolean).join(' · ');
-    $('#fs-note-del').hidden = READ_ONLY || status === 'sent'; // as in the panel: not while Claude has it
-    const t = $('#fs-note-text');
-    const editable = !READ_ONLY && status === 'open';
-    t.hidden = !editable;
-    $('#fs-note-read').hidden = editable;
-    $('#fs-note-read').textContent = m.text || '(no note)';
-    if (editable && (t.dataset.id !== m.id || document.activeElement !== t)) t.value = m.text || '';
-    t.dataset.id = m.id;
-    autosize(t);
+    $('#fs-notes').title = !marks.length ? 'No marks on this state yet' : S.fsNote ? 'Fold the marks away' : `Show the marks (${marks.length} on this state)`;
+    $('#fs-notes').setAttribute('aria-pressed', String(S.fsNote && !!marks.length));
+    $('#fs-note').hidden = !(S.fsNote && marks.length);
+    const live = marks.filter((m) => m.status !== 'done').length;
+    $('#fs-note-count').textContent = `· ${marks.length}${live < marks.length ? ` (${marks.length - live} resolved)` : ''}`;
   }
 
   /** Put the toolbar where the author left it (kept inside the window), or docked at the bottom centre. */
@@ -1129,18 +1118,15 @@
     bar.style.top = `${y}px`;
   }
 
-  /** Open the note card for a mark (the selected one, else the latest), or fold it back into the toolbar. */
+  /** Show every mark on the state beside the toolbar (focusing the selected one's note), or fold them back into it. */
   function showFsNote(on) {
     if (!S.focus) return;
-    if (on && !S.hot) {
-      const marks = marksOf(S.focus.screen, S.focus.state);
-      const last = [...marks].reverse().find((m) => m.status !== 'done') || marks[marks.length - 1];
-      if (!last) return;
-      return selectMark(last.id, true);
-    }
     S.fsNote = !!on;
     paintFs();
-    if (on) $('#fs-note-text:not([hidden])')?.focus();
+    if (!on) return;
+    const li = S.hot && $(`#fs-list .mark[data-id="${CSS.escape(S.hot)}"]`);
+    li?.scrollIntoView({ block: 'nearest' });
+    (li?.querySelector('textarea') || $('#fs-note')).focus();
   }
 
   function wireFullscreen() {
@@ -1153,31 +1139,22 @@
     $('#stage-full').addEventListener('click', () => setFull(!S.full));
     $('#fs-exit').addEventListener('click', () => setFull(false));
     $('#fs-send').addEventListener('click', () => S.focus && sendToClaude(S.focus.screen));
-    $('#fs-notes').addEventListener('pointerdown', (e) => e.preventDefault()); // keep focus in the note, so the click toggles it
-    $('#fs-notes').addEventListener('click', () => showFsNote(!(S.fsNote && S.hot)));
+    $('#fs-notes').addEventListener('pointerdown', (e) => e.preventDefault()); // keep focus in the list, so the click toggles it
+    $('#fs-notes').addEventListener('click', () => showFsNote(!S.fsNote));
     $('#fs-note-close').addEventListener('click', () => showFsNote(false));
-    $('#fs-note-del').addEventListener('click', () => S.hot && deleteMark(S.hot));
-    // Done writing: Enter (Shift+Enter is a new line), or focus leaving the card, folds it into the toolbar.
-    $('#fs-note-text').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+    // Done writing: Enter (Shift+Enter is a new line) leaves the note; focus leaving the list folds it into the toolbar,
+    // unless the pointer is over it (a delete, a click between rows).
+    $('#fs-list').addEventListener('keydown', (e) => {
+      if (e.target.matches('textarea') && e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
         e.preventDefault();
         e.target.blur();
+        showFsNote(false);
       }
     });
     $('#fs-note').addEventListener('focusout', (e) => {
-      if (!e.relatedTarget || !$('#fs-note').contains(e.relatedTarget)) setTimeout(() => !$('#fs-note').contains(document.activeElement) && showFsNote(false), 0);
-    });
-    $('#fs-note-text').addEventListener('input', (e) => {
-      const t = e.target;
-      const m = S.focus && marksOf(S.focus.screen, S.focus.state).find((x) => x.id === t.dataset.id);
-      if (!m) return;
-      m.text = t.value;
-      autosize(t);
-      save();
-      const li = $(`#marks .mark[data-id="${CSS.escape(m.id)}"] textarea`);
-      if (li) li.value = m.text;
-      const title = stage?.marksG.querySelector(`[data-id="${CSS.escape(m.id)}"] title`);
-      if (title) title.textContent = `${m.n}. ${m.text || SHAPES[m.shape]}`;
+      const card = $('#fs-note');
+      if (e.relatedTarget && card.contains(e.relatedTarget)) return;
+      setTimeout(() => !card.contains(document.activeElement) && !card.matches(':hover') && showFsNote(false), 0);
     });
     // Drag by the grip; double-click docks it back.
     const bar = $('#fs-bar');
@@ -1817,6 +1794,7 @@
       if (!$('#activity').hidden || !$('#export-pop').hidden) return closePops(null);
       if (appOpen()) return closeApp();
       if (S.focus && S.tool !== 'select') return setTool('select');
+      if (S.full && S.fsNote) return showFsNote(false);
       if (S.focus && S.hot) return selectMark(null, false);
       if (S.full) return setFull(false);
       if (S.focus) return closeFocus();

@@ -485,24 +485,19 @@ body.fullscreen .stage-body { padding: 16px; }
   position: absolute; top: -6px; right: -6px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; display: grid; place-items: center;
   font-size: 10.5px; font-weight: 700; color: #fff; background: var(--mark); box-shadow: 0 0 0 2px var(--surface); font-variant-numeric: tabular-nums;
 }
-/* The selected mark's note: a card beside the toolbar (on its left when the toolbar sits in the right half), so the toolbar never moves.
-   It opens for a new mark or a mark clicked on the mock, and folds back into the toolbar's note button when the author is done. */
+/* Every mark on the state, in a panel beside the toolbar (on its left when the toolbar sits in the right half), so the toolbar never
+   moves. It opens for a new mark or a mark clicked on the mock, and folds back into the toolbar's note button when the author is done. */
 .fs-note {
   position: absolute; left: calc(100% + 8px); top: 50%; transform: translateY(-50%);
-  display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 12px;
-  border-radius: 12px; background: var(--surface); box-shadow: var(--pop-shadow); width: min(420px, calc(100vw - 24px));
+  display: flex; flex-direction: column; width: min(380px, calc(100vw - 80px)); max-height: calc(100vh - 32px);
+  border-radius: 12px; background: var(--surface); box-shadow: var(--pop-shadow); outline: none;
 }
 .fs-bar.flip .fs-note { left: auto; right: calc(100% + 8px); }
-.fs-note .n { width: 22px; height: 22px; border-radius: 50%; background: var(--mark); color: #fff; display: grid; place-items: center; font-size: 11.5px; font-weight: 700; }
-.fs-note.sent .n { background: var(--sent); }
-.fs-note.done .n { background: var(--done); }
-.fs-note-close { position: absolute; top: 6px; right: 6px; }
-.fs-note-del { position: absolute; top: 6px; right: 32px; }
-.fs-note-del:hover { color: var(--mark); background: var(--mark-soft); }
-.fs-note-hint { margin: 5px 0 0; font-size: 11.5px; color: var(--faint); }
-.fs-note-head { margin: 0 52px 6px 0; font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.fs-note textarea { min-height: 34px; resize: none; overflow: hidden; }
-.fs-note-text { margin: 0; font-size: 13.5px; white-space: pre-wrap; }
+.fs-note-top { display: flex; align-items: center; gap: 8px; padding: 10px 8px 6px 14px; }
+.fs-note-top .label { margin: 0; flex: 1; }
+.fs-note-hint { font-size: 11.5px; color: var(--faint); }
+.fs-note .marks { margin: 0; padding: 0 10px 10px; overflow: auto; min-height: 0; }
+.fs-note .mark.done { opacity: 0.6; }
 
 /* the Export popover's request */
 #export-form textarea { margin: 6px 0 6px; resize: vertical; }

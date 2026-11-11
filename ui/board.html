@@ -151,16 +151,14 @@
 
     <!-- Full screen (F): only the state, fitted to the window, and this toolbar, which can be dragged anywhere. -->
     <div class="fs-bar" id="fs-bar" role="toolbar" aria-label="Full screen tools" hidden>
-      <div class="fs-note" id="fs-note" hidden>
-        <span class="n" id="fs-note-n"></span>
-        <button class="icon-btn small fs-note-del live-only" id="fs-note-del" type="button" title="Delete this mark" aria-label="Delete this mark"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8.5h5.8l.6-8.5M7 7v3.5M9 7v3.5"/></svg></button>
-        <button class="icon-btn small fs-note-close" id="fs-note-close" type="button" title="Fold it into the toolbar (Enter)" aria-label="Fold the note away"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>
-        <div class="fs-note-body">
-          <p class="fs-note-head" id="fs-note-head"></p>
-          <textarea id="fs-note-text" rows="1" placeholder="What should change here?"></textarea>
-          <p class="fs-note-hint live-only">Enter to finish · Shift+Enter for a new line</p>
-          <p class="fs-note-text" id="fs-note-read"></p>
+      <!-- Every mark on the state, as in the side panel: write, edit or delete their notes. Folds into the toolbar's note button. -->
+      <div class="fs-note" id="fs-note" tabindex="-1" hidden>
+        <div class="fs-note-top">
+          <p class="label">Marks <span class="muted" id="fs-note-count"></span></p>
+          <span class="fs-note-hint live-only">Enter to finish</span>
+          <button class="icon-btn small" id="fs-note-close" type="button" title="Fold into the toolbar (Esc)" aria-label="Fold the marks away"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>
         </div>
+        <ol class="marks" id="fs-list"></ol>
       </div>
       <div class="fs-row">
         <button class="fs-grip" id="fs-grip" type="button" title="Drag to move · double-click to dock" aria-label="Move the toolbar"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="4" cy="6" r=".6" class="fill"/><circle cx="4" cy="10" r=".6" class="fill"/><circle cx="8" cy="6" r=".6" class="fill"/><circle cx="8" cy="10" r=".6" class="fill"/><circle cx="12" cy="6" r=".6" class="fill"/><circle cx="12" cy="10" r=".6" class="fill"/></svg></button>
@@ -168,7 +166,7 @@
         <span class="fs-sep live-only"></span>
         <span class="fs-tools live-only" id="fs-tools"></span>
         <span class="fs-sep live-only"></span>
-        <button class="fs-btn" id="fs-notes" type="button" aria-label="Show the note" aria-pressed="false"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3h10v7.5H8.5L5.5 13v-2.5H3z"/><path d="M5.5 5.8h5M5.5 8h3.5"/></svg><span class="fs-marks" id="fs-marks" hidden></span></button>
+        <button class="fs-btn" id="fs-notes" type="button" aria-label="Show the marks" aria-pressed="false"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3h10v7.5H8.5L5.5 13v-2.5H3z"/><path d="M5.5 5.8h5M5.5 8h3.5"/></svg><span class="fs-marks" id="fs-marks" hidden></span></button>
         <button class="fs-btn fs-send live-only" id="fs-send" type="button" disabled aria-label="Send this screen to Claude"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 8 13.5 3l-4 10.5-2-4.5z"/><path d="M7.5 9 13.5 3"/></svg><span class="fs-count" id="fs-count" hidden></span></button>
         <button class="fs-btn" id="fs-exit" type="button" title="Leave full screen (Esc or F)" aria-label="Leave full screen"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 2.5V6H2.5M13.5 6H10V2.5M10 13.5V10h3.5M2.5 10H6v3.5"/></svg></button>
       </div>
