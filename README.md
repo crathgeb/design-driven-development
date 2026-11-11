@@ -17,7 +17,7 @@ You mark them up:
 - **ask** for anything else ("add a state where nothing is saved yet");
 - **ask for the whole app or a flow** ("make it feel warmer", "try a bolder type scale", "rename Drill to Practice everywhere"), and write a **design direction** every such request carries.
 
-Press **Send to Claude**. Each screen with marks becomes a job, a background subagent revises it, and the board reloads the mocks as they change while you keep looking. Press **F** on a state to see it truly full screen, edge to edge, with a toolbar you can drag anywhere, and keep marking it up. When the experience is right, press **Export** and send "export the spec" (add anything else you want from the handoff, like "…and break the work into epics and stories"), or say it to Claude.
+Press **Send to Claude**. Each screen with marks becomes a job, a background subagent revises it, and the board reloads the mocks as they change while you keep looking. Press **F** on a state to see it full screen, with a toolbar you can drag anywhere, and keep marking it up. When the experience is right, press **Export** and send "export the spec" (add anything else you want from the handoff, like "…and break the work into epics and stories"), or say it to Claude.
 
 ## Install
 

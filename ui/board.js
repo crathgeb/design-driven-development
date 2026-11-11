@@ -20,7 +20,7 @@
   const BOX_H = 844;
   const THUMB_W = 240;
   const THUMB_H = 169;
-  const STAGE_STEPS = [0.25, 0.33, 0.5, 0.67, 0.75, 0.9, 1, 1.25, 1.5, 2, 3, 4];
+  const STAGE_STEPS = [0.25, 0.33, 0.5, 0.67, 0.75, 0.9, 1, 1.25, 1.5, 2];
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const DATA = document.getElementById('ddd-data');
@@ -154,8 +154,7 @@
   const boardScale = (d) => S.zoom * Math.min(1, BOX_W / d.width, BOX_H / d.height);
   const thumbScale = (d) => Math.min(THUMB_W / d.width, THUMB_H / d.height);
   /** The browser window's title bar height at scale z (desktop and laptop frames); 0 for other frames. */
-  // fixed: the title bar's height whatever the scale (the focus view), or -1 for none (full screen: the state is the window).
-  const chromeHeight = (d, z, fixed) => (d.kind !== 'browser' || fixed < 0 ? 0 : fixed || Math.round(Math.max(8, Math.min(30, 40 * z))));
+  const chromeHeight = (d, z, fixed) => (d.kind !== 'browser' ? 0 : fixed || Math.round(Math.max(8, Math.min(30, 40 * z))));
 
   const screenNotes = (screen) => S.notes.screens[screen] || null;
   const stateNotes = (screen, state) => S.notes.screens[screen]?.states?.[state] || null;
@@ -261,7 +260,7 @@
   function frame(screen, state, z, { interactive = false, register = true, chrome = 0 } = {}) {
     const dev = deviceOf(screen.id, state.id);
     const p = el('div', { class: `frame k-${dev.kind}`, 'data-screen': screen.id, 'data-state': state.id, 'data-device': dev.name });
-    if (dev.kind === 'browser' && chrome >= 0) {
+    if (dev.kind === 'browser') {
       p.append(
         el(
           'div',
@@ -640,26 +639,21 @@
     return hit && state ? { ...hit, state } : null;
   };
 
-  /**
-   * The scale that fits a device's frame into the stage (Fit): never above 1 in the focus view; in full screen
-   * the state fills the window edge to edge (no browser title bar, no margin), scaled up on a bigger screen.
-   * The zoom (−, +, 100%) works in both; a frame bigger than the room scrolls.
-   */
+  /** The scale that fits a device's frame into the stage (never above 1). Full screen leaves a 16px margin. */
   function stageFit(dev) {
     const body = $('#stage-body');
-    if (S.full) return Math.max(0.1, Math.min(4, body.clientHeight / dev.height, body.clientWidth / dev.width));
     const ch = chromeHeight(dev, 1, STAGE_CHROME);
-    return Math.max(0.1, Math.min(1, (body.clientHeight - 36 - ch) / dev.height, (body.clientWidth - 36) / dev.width));
+    const pad = S.full ? 32 : 36;
+    return Math.max(0.1, Math.min(1, (body.clientHeight - pad - ch) / dev.height, (body.clientWidth - pad) / dev.width));
   }
 
   /** The focus view's scale: fitted, or the one the author picked (kept across states and visits). */
   function stageZoom(dev) {
     const fit = stageFit(dev);
-    const z = S.stageZoom === 'fit' ? fit : Number(S.stageZoom) || 1;
-    // The same zoom in the stage head and on the full-screen toolbar.
-    $('#stage-zoom-val').textContent = $('#fs-zoom-val').textContent = `${Math.round(z * 100)}%`;
-    for (const b of ['#stage-fit', '#fs-fit']) $(b).setAttribute('aria-pressed', String(S.stageZoom === 'fit'));
-    for (const b of ['#stage-100', '#fs-100']) $(b).setAttribute('aria-pressed', String(S.stageZoom !== 'fit' && Math.abs(z - 1) < 0.001));
+    const z = S.full || S.stageZoom === 'fit' ? fit : Number(S.stageZoom) || 1;
+    $('#stage-zoom-val').textContent = `${Math.round(z * 100)}%`;
+    $('#stage-fit').setAttribute('aria-pressed', String(S.stageZoom === 'fit'));
+    $('#stage-100').setAttribute('aria-pressed', String(S.stageZoom !== 'fit' && Math.abs(z - 1) < 0.001));
     $('#stage-device').textContent = deviceText(dev);
     $('#stage-device').title = sameDevice(dev, defaultDevice()) ? 'The project’s device' : `This state is designed for another device than the project’s (${deviceText(defaultDevice())})`;
     return z;
@@ -669,8 +663,8 @@
     if (!stage) return;
     const cur = stage.z;
     let next = v;
-    if (v === 'in') next = STAGE_STEPS.find((x) => x > cur + 0.001) ?? cur;
-    else if (v === 'out') next = [...STAGE_STEPS].reverse().find((x) => x < cur - 0.001) ?? cur;
+    if (v === 'in') next = STAGE_STEPS.find((x) => x > cur + 0.001) ?? STAGE_STEPS[STAGE_STEPS.length - 1];
+    else if (v === 'out') next = [...STAGE_STEPS].reverse().find((x) => x < cur - 0.001) ?? STAGE_STEPS[0];
     S.stageZoom = next;
     store.set('stageZoom', next);
     resizeStage();
@@ -684,7 +678,7 @@
     holder.textContent = '';
     const dev = deviceOf(d.screen.id, d.state.id);
     const z = stageZoom(dev);
-    const fr = frame(d.screen, d.state, z, { interactive: true, chrome: S.full ? -1 : dev.kind === 'browser' ? STAGE_CHROME : 0 });
+    const fr = frame(d.screen, d.state, z, { interactive: true, chrome: dev.kind === 'browser' ? STAGE_CHROME : 0 });
     fr.el.querySelector('.badge')?.remove();
     // The marks layer: an SVG in the mock's own CSS pixels (its device's size), scaled with the iframe, shifted by its scroll.
     const { width: W, height: H } = dev;
@@ -1075,13 +1069,8 @@
       closeApp();
       placeFsBar();
     }
-    // The browser's own full screen too, so its tabs and address bar go away. If it refuses (no user
-    // gesture, or not allowed), the board's full screen still works inside the window.
-    const root = document.documentElement;
-    if (on && !document.fullscreenElement && root.requestFullscreen) root.requestFullscreen({ navigationUI: 'hide' }).catch(() => {});
-    if (!on && document.fullscreenElement) document.exitFullscreen().catch(() => {});
     paintFs();
-    renderStage(); // the frame loses (or gets back) its browser title bar
+    resizeStage();
   }
 
   /** The toolbar's title, count, Send, and the selected mark's note card. */
@@ -1136,10 +1125,6 @@
     }
     $('#stage-full').addEventListener('click', () => setFull(!S.full));
     $('#fs-exit').addEventListener('click', () => setFull(false));
-    $('#fs-fit').addEventListener('click', () => setStageZoom('fit'));
-    $('#fs-100').addEventListener('click', () => setStageZoom(1));
-    $('#fs-in').addEventListener('click', () => setStageZoom('in'));
-    $('#fs-out').addEventListener('click', () => setStageZoom('out'));
     $('#fs-send').addEventListener('click', () => S.focus && sendToClaude(S.focus.screen));
     $('#fs-note-text').addEventListener('input', (e) => {
       const t = e.target;
@@ -1184,10 +1169,6 @@
       placeFsBar();
     });
     addEventListener('resize', () => S.full && placeFsBar());
-    // Esc in the browser's full screen is the browser's: it leaves full screen, so the board does too.
-    document.addEventListener('fullscreenchange', () => {
-      if (!document.fullscreenElement && S.full) setFull(false);
-    });
   }
 
   function wireDrawing(overlay, s) {

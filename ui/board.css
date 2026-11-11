@@ -447,15 +447,13 @@ body.side-open .side { transform: none; visibility: visible; transition: transfo
 .ask-summary { margin: 8px 0 0; padding: 6px 9px; border-radius: 7px; background: var(--surface-2); font-size: 12.5px; }
 
 /* ---------- full screen (F, in the focus view) ---------- */
-/* The browser's full screen with only the state, fitted to the screen edge to edge (a desktop state without its
-   browser title bar), and one floating toolbar. Everything else (top bar, sidebar, tool rail, stage head, strip,
-   panel) steps aside; marks are still drawn and their notes written in the toolbar. */
+/* Only the state, fitted to the window, and one floating toolbar. Everything else (top bar, sidebar, tool
+   rail, stage head, strip, panel) steps aside; marks are still drawn and their notes written in the toolbar. */
 body.fullscreen .top, body.fullscreen .side, body.fullscreen .zoom, body.fullscreen .rail,
 body.fullscreen .stage-head, body.fullscreen .strip, body.fullscreen .panel { display: none !important; }
 body.fullscreen .focus { inset: 0; z-index: 40; grid-template-columns: minmax(0, 1fr); }
 body.fullscreen .stage { grid-template-rows: minmax(0, 1fr); }
-body.fullscreen .stage-body { padding: 0; }
-body.fullscreen .stage-frame .frame.k-browser, body.fullscreen .stage-frame .frame.k-plain { border-radius: 0; box-shadow: none; } /* a phone or tablet keeps its rounded screen */
+body.fullscreen .stage-body { padding: 16px; }
 .fs-bar { position: fixed; z-index: 45; left: 50%; bottom: 16px; transform: translateX(-50%); max-width: calc(100vw - 24px); }
 .fs-bar.moved { transform: none; bottom: auto; }
 .fs-row {

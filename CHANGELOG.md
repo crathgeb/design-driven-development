@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- **Full screen in the focus view.** **F** (or the button beside the zoom) puts the browser in full screen, hides the top bar, sidebar, tool rail, strip and panel, and shows the state edge to edge (a desktop state without its browser title bar, scaled to the screen), which matters most for desktop states. Fit fills the screen, and the zoom (−, +, 100%) sizes the state itself, not the board's controls. A floating toolbar keeps marking up possible: the tools, the zoom, the count to send, Send to Claude and Exit. Drag it anywhere by its grip (it remembers where), double-click to dock it; the selected mark's note opens as a card on it.
+- **Full screen in the focus view.** **F** (or the button beside the zoom) hides the top bar, sidebar, tool rail, strip and panel and fits the state to the window, which matters most for desktop states. A floating toolbar keeps marking up possible: the tools, the count to send, Send to Claude and Exit. Drag it anywhere by its grip (it remembers where), double-click to dock it; the selected mark's note opens as a card on it.
 - **Export from the board.** The Export popover is a request box prefilled with "export the spec" that you can extend ("…and break the work into epics and stories") and send. It becomes an `export` job (`POST /api/ask` with `scope: "export"`), which covers no screen and runs alongside other jobs; its context pack says how to run `export.mjs`, write `spec.md`, and anything else asked for as its own file. The listener prints `export job <id>: …`, Activity lists it, and the pill says "Exporting the spec".
 - A mark just drawn stays selected (the click ending the drag no longer deselects it).
 
