@@ -17,7 +17,7 @@ You mark them up:
 - **ask** for anything else ("add a state where nothing is saved yet");
 - **ask for the whole app or a flow** ("make it feel warmer", "try a bolder type scale", "rename Drill to Practice everywhere"), and write a **design direction** every such request carries.
 
-Press **Send to Claude**. Each screen with marks becomes a job, a background subagent revises it, and the board reloads the mocks as they change while you keep looking. When the experience is right, say **"export the spec"**.
+Press **Send to Claude**. Each screen with marks becomes a job, a background subagent revises it, and the board reloads the mocks as they change while you keep looking. Press **F** on a state to see it full screen, with a toolbar you can drag anywhere, and keep marking it up. When the experience is right, press **Export** and send "export the spec" (add anything else you want from the handoff, like "…and break the work into epics and stories"), or say it to Claude.
 
 ## Install
 
@@ -45,7 +45,7 @@ or just ask: "mock up the settings screen", "let's design the checkout experienc
 3. **Claude serves it and connects**: the board shows **Claude connected**.
 4. **You mark it up** and press **Send to Claude**. One job per screen; jobs on different screens run in parallel. Each job's context pack holds the screen, its states, your marks with the element each one points at, and the rules, so a fresh worker can act on it alone.
 5. **The board follows**: changed mocks reload with a highlight, the Activity list shows each job's summary, and the files a job changed are kept in `history/` first.
-6. Repeat until it's right, then **"export the spec"**.
+6. Repeat until it's right, then **Export** from the board (or say "export the spec").
 
 If the session ends, nothing is lost: marks save as you make them, and jobs you send wait until Claude connects again.
 
@@ -82,7 +82,7 @@ Every mock is built from a small **kit**, so screens from different workers look
 
 ## Export
 
-`export.mjs` writes `<repo>/docs/design/<slug>/`:
+**Export** on the board sends an export job: its worker runs `export.mjs`, writes `spec.md`, and anything else your request asks for (a `plan.md` of epics and stories, say). `export.mjs` writes `<repo>/docs/design/<slug>/`:
 
 ```
 index.html     the board, read-only, opens from disk

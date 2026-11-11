@@ -37,9 +37,12 @@
         <button class="btn ghost" id="export-btn" type="button" aria-expanded="false">Export</button>
         <div class="pop export" id="export-pop" hidden>
           <p class="pop-title">Export the spec</p>
-          <p class="muted">When the experience is right, say this to Claude. It writes the spec, the mocks and a read-only board into the product's repo.</p>
-          <div class="say"><code id="export-say">export the spec</code><button class="btn small" id="export-copy" type="button">Copy</button></div>
-          <p class="muted small" id="export-dest"></p>
+          <p class="muted">When the experience is right, send this to Claude. It writes the spec, the mocks and a read-only board into the product's repo. Add anything else you want from the handoff.</p>
+          <form id="export-form">
+            <textarea id="export-text" rows="3" aria-label="What to export" required>export the spec</textarea>
+            <p class="muted small" id="export-dest"></p>
+            <div class="form-actions"><span class="muted small export-keys">⌘↵ to send</span><button class="btn primary small" type="submit" id="export-send">Send to Claude</button></div>
+          </form>
         </div>
       </div>
       <button class="btn live-only" id="ask-btn" type="button">Ask Claude…</button>
@@ -109,6 +112,7 @@
             <button class="icon-btn small" id="stage-in" type="button" title="Zoom in (+)" aria-label="Zoom in"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8h9M8 3.5v9"/></svg></button>
             <button class="btn small ghost" id="stage-100" type="button" title="Actual size: one CSS pixel per pixel (1)">100%</button>
           </div>
+          <button class="icon-btn small" id="stage-full" type="button" title="Full screen (F)" aria-label="Full screen"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 6V2.5H6M10 2.5h3.5V6M13.5 10v3.5H10M6 13.5H2.5V10"/></svg></button>
         </div>
       </div>
       <div class="stage-body" id="stage-body">
@@ -144,6 +148,28 @@
         <button class="btn primary wide" id="send-screen" type="button" disabled>Send this screen to Claude</button>
       </div>
     </aside>
+
+    <!-- Full screen (F): only the state, fitted to the window, and this toolbar, which can be dragged anywhere. -->
+    <div class="fs-bar" id="fs-bar" role="toolbar" aria-label="Full screen tools" hidden>
+      <div class="fs-note" id="fs-note" hidden>
+        <span class="n" id="fs-note-n"></span>
+        <div class="fs-note-body">
+          <p class="fs-note-head" id="fs-note-head"></p>
+          <textarea id="fs-note-text" rows="1" placeholder="What should change here?"></textarea>
+          <p class="fs-note-text" id="fs-note-read"></p>
+        </div>
+      </div>
+      <div class="fs-row">
+        <button class="fs-grip" id="fs-grip" type="button" title="Drag to move · double-click to dock" aria-label="Move the toolbar"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="6" cy="4" r=".6" class="fill"/><circle cx="10" cy="4" r=".6" class="fill"/><circle cx="6" cy="8" r=".6" class="fill"/><circle cx="10" cy="8" r=".6" class="fill"/><circle cx="6" cy="12" r=".6" class="fill"/><circle cx="10" cy="12" r=".6" class="fill"/></svg></button>
+        <span class="fs-title" id="fs-title"></span>
+        <span class="fs-sep live-only"></span>
+        <span class="fs-tools live-only" id="fs-tools"></span>
+        <span class="fs-sep live-only"></span>
+        <span class="fs-count live-only" id="fs-count"></span>
+        <button class="btn primary small live-only" id="fs-send" type="button" disabled>Send to Claude</button>
+        <button class="btn small ghost" id="fs-exit" type="button" title="Leave full screen (Esc or F)">Exit</button>
+      </div>
+    </div>
   </section>
 
   <aside class="drawer" id="app-panel" hidden aria-label="Whole app">

@@ -59,10 +59,10 @@ Ask only what blocks the first board, in one short message. Everything else, dec
 
    While it runs, the board shows **Claude connected**. **Re-arm** the same Monitor whenever it expires, as long as the author is still working on the board. Jobs sent while nobody listened are offered as soon as you reconnect.
 3. **Tell the author** the URL and how it works, in four lines:
-   - Click a state to focus it; draw with Pin (P), Box (B), Ellipse (E), Arrow (A) or Pen (D), and type a note for each mark.
+   - Click a state to focus it; draw with Pin (P), Box (B), Ellipse (E), Arrow (A) or Pen (D), and type a note for each mark. **F** makes it full screen (just the state, and a toolbar you can drag anywhere).
    - Write your own context for a screen or state in its note; Claude's intent is beside it.
    - **Send to Claude** hands over every open mark (one job per screen); **Ask Claude…** asks for anything else, for one screen, a flow, or the whole app ("make it feel warmer"). The sidebar (`[`) lists every flow and screen; **Whole app** in it holds the design direction for every screen.
-   - Keep looking: screens reload as Claude changes them. Say "export the spec" when it's right.
+   - Keep looking: screens reload as Claude changes them. When it's right, **Export** sends "export the spec" (add what else you want from the handoff, like epics and stories), or say it here.
 
 ## 5. Work jobs as they arrive
 
@@ -74,6 +74,7 @@ Each listener line is an event:
 | `job <id> on "<screen>" (n marks, m asks). Run …` | Work it, as below. |
 | `the author asked "<text>" …` | Work it, as below. |
 | `whole-app job <id>: …` / `flow job on "<flow>" <id>: …` | Work it, as below: the same three steps. Its subagent changes `theme.css` first, then only the mocks that must change, and may split big edits by flow across its own subagents (the pack says how). |
+| `export job <id>: the author asked "<text>" …` | Work it, as below: the author pressed Export on the board. Its pack says how to run `export.mjs`, write `spec.md`, and whatever else the request asks for (step 6 is the same work). Pass the summary's folder and files on to the author. |
 | `the server for "<name>" has stopped` | Tell the author. Serve again and reconnect if they're still working. |
 
 For each job:
@@ -86,14 +87,14 @@ Jobs on different screens run in parallel: start one subagent per job as they ar
 
 ## 6. Export when asked
 
-When the author says "export the spec" (or the board's Export points them here):
+When the author says "export the spec" here. (Export on the board sends an **export job** instead: work it like any job; its pack holds these same steps and the author's request.)
 
 1. `node "${CLAUDE_PLUGIN_ROOT}/scripts/export.mjs" <project>`. It writes `<product repo>/docs/design/<slug>/`: a read-only board (`index.html`, opens from disk), the mocks and kit, `board.json`, `notes.json`, `screens/*.png`, and a `spec.md` skeleton with every flow, screen and state and its intent. If `spec.md` already exists, it writes `spec.skeleton.md` and keeps yours.
 2. **Fill in `spec.md`.** Read the board, the mocks and the notes (resolved marks are the decisions made with the author). Write, under the skeleton's headings:
    - **The experience in words:** flow by flow, what the user does and sees; screen by screen, what's on it and why; state by state, when it happens and what changes.
    - **Decisions settled:** each with the reason, from the author's notes and resolved marks ("Connector slots show only their purpose on Answer: the author wanted a hint, not the word").
    - **Open questions:** what the author left unresolved, open marks, and anything you decided that they never confirmed.
-   - Use the product's glossary terms. No implementation plan: that's the build session's job.
+   - Use the product's glossary terms. No implementation plan: that's the build session's job, unless the author asks for one (epics and stories, a build plan): then write it as its own file beside `spec.md` (e.g. `plan.md`) and link it from the spec.
 3. Tell the author the folder in their repo, and that a later session can build from `spec.md` and the mocks.
 
 ## Done means

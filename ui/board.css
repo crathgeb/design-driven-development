@@ -1,6 +1,6 @@
 /* The board's look: a calm, neutral canvas with device frames (phone, tablet, browser window, plain), a top bar, the sidebar of flows and
-   screens, the focus view (tool rail, stage with the SVG mark overlay, side panel) and the Whole app
-   panel. Light and dark via prefers-color-scheme. */
+   screens, the focus view (tool rail, stage with the SVG mark overlay, side panel, and full screen with its
+   floating toolbar) and the Whole app panel. Light and dark via prefers-color-scheme. */
 
 :root {
   --canvas: #f3f3f1;
@@ -135,8 +135,6 @@ svg .fill { fill: currentColor; stroke: none; }
 }
 .pop-title { margin: 0 0 4px; font-size: 14.5px; font-weight: 600; }
 .pop p { margin: 0 0 8px; }
-.say { display: flex; align-items: center; gap: 8px; justify-content: space-between; margin: 10px 0 8px; padding: 8px 8px 8px 12px; border-radius: 8px; background: var(--sunken); }
-.say code { font: 13px var(--mono); }
 .activity { padding: 6px; }
 .activity .a-empty { padding: 10px; margin: 0; }
 .job { display: grid; grid-template-columns: 14px 1fr; gap: 4px 8px; padding: 9px 10px; border-radius: 8px; }
@@ -447,6 +445,49 @@ body.side-open .side { transform: none; visibility: visible; transition: transfo
 .ask-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin-top: 6px; font-size: 12px; color: var(--muted); }
 .ask-scope { font-weight: 600; color: var(--text); }
 .ask-summary { margin: 8px 0 0; padding: 6px 9px; border-radius: 7px; background: var(--surface-2); font-size: 12.5px; }
+
+/* ---------- full screen (F, in the focus view) ---------- */
+/* Only the state, fitted to the window, and one floating toolbar. Everything else (top bar, sidebar, tool
+   rail, stage head, strip, panel) steps aside; marks are still drawn and their notes written in the toolbar. */
+body.fullscreen .top, body.fullscreen .side, body.fullscreen .zoom, body.fullscreen .rail,
+body.fullscreen .stage-head, body.fullscreen .strip, body.fullscreen .panel { display: none !important; }
+body.fullscreen .focus { inset: 0; z-index: 40; grid-template-columns: minmax(0, 1fr); }
+body.fullscreen .stage { grid-template-rows: minmax(0, 1fr); }
+body.fullscreen .stage-body { padding: 16px; }
+.fs-bar { position: fixed; z-index: 45; left: 50%; bottom: 16px; transform: translateX(-50%); max-width: calc(100vw - 24px); }
+.fs-bar.moved { transform: none; bottom: auto; }
+.fs-row {
+  display: flex; align-items: center; gap: 4px; padding: 5px 6px; border-radius: 12px;
+  background: color-mix(in srgb, var(--surface) 94%, transparent); box-shadow: var(--pop-shadow);
+  backdrop-filter: saturate(1.4) blur(12px); -webkit-backdrop-filter: saturate(1.4) blur(12px);
+}
+.fs-grip { width: 22px; height: 30px; flex: none; border: 0; border-radius: 6px; background: transparent; color: var(--faint); cursor: grab; display: grid; place-items: center; touch-action: none; }
+.fs-grip:hover { background: var(--sunken); color: var(--text); }
+.fs-bar.dragging .fs-grip { cursor: grabbing; }
+.fs-title { font-size: 13px; font-weight: 600; padding: 0 6px 0 2px; max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fs-sep { width: 1px; height: 20px; background: var(--line); margin: 0 4px; flex: none; }
+.fs-tools { display: flex; gap: 2px; }
+.fs-tools button { width: 32px; height: 32px; border-radius: 8px; border: 0; background: transparent; color: var(--muted); display: grid; place-items: center; cursor: pointer; }
+.fs-tools button:hover { background: var(--sunken); color: var(--text); }
+.fs-tools button[aria-pressed='true'] { background: var(--primary); color: var(--on-primary); }
+.fs-count { font-size: 12.5px; color: var(--muted); padding: 0 6px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+/* The selected mark's note: a card on top of the toolbar (under it when the toolbar sits in the top half), so the toolbar never moves. */
+.fs-note {
+  position: absolute; left: 50%; bottom: calc(100% + 6px); transform: translateX(-50%);
+  display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 12px;
+  border-radius: 12px; background: var(--surface); box-shadow: var(--pop-shadow); width: min(420px, calc(100vw - 24px));
+}
+.fs-bar.below .fs-note { bottom: auto; top: calc(100% + 6px); }
+.fs-note .n { width: 22px; height: 22px; border-radius: 50%; background: var(--mark); color: #fff; display: grid; place-items: center; font-size: 11.5px; font-weight: 700; }
+.fs-note.sent .n { background: var(--sent); }
+.fs-note.done .n { background: var(--done); }
+.fs-note-head { margin: 0 0 6px; font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fs-note textarea { min-height: 34px; resize: none; overflow: hidden; }
+.fs-note-text { margin: 0; font-size: 13.5px; white-space: pre-wrap; }
+
+/* the Export popover's request */
+#export-form textarea { margin: 6px 0 6px; resize: vertical; }
+#export-form .form-actions { align-items: center; justify-content: space-between; }
 
 /* ---------- toast ---------- */
 .toast {

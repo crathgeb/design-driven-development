@@ -3,7 +3,7 @@
 //
 //   node listen.mjs <project> [--port N]
 //       Connects to the project's server and prints one line per event: when connected, and for
-//       each job the author sends (marks on a screen, or an ask). Meant for Claude Code's Monitor
+//       each job the author sends (marks on a screen, an ask, or an export). Meant for Claude Code's Monitor
 //       tool: each line wakes Claude with the job. While it's connected, the board shows
 //       "Claude connected", and jobs queued while no one listened are offered at once.
 //       It reconnects if the server restarts, and exits after ~30 s with no server.
@@ -73,6 +73,9 @@ function describe(ev) {
     const size = `${plural(ev.screens || 0, 'screen')}, ${plural(ev.states || 0, 'state')}`;
     const label = ev.kind === 'app' ? 'whole-app job' : `flow job on "${ev.flowTitle || ev.flow}"`;
     return `design-driven-development: ${label} ${ev.id}: the author asked "${oneLine(ev.text)}" (${size}). This is ${what}, and no other job touches those screens until it's done. ${steps} The pack tells the subagent to change the theme first and, if many mocks need edits, to split them by flow across its own subagents.`;
+  }
+  if (ev.kind === 'export') {
+    return `design-driven-development: export job ${ev.id}: the author asked "${oneLine(ev.text)}". This is an export: it writes the spec (and whatever else the request asks for) into the product repo and changes no screen. ${steps}`;
   }
   if (ev.kind === 'marks' || ev.screen) {
     return `design-driven-development: job ${ev.id} on "${ev.screenTitle || ev.screen}" (${plural(ev.marks, 'mark')}, ${plural(ev.asks, 'ask')}). ${steps}`;

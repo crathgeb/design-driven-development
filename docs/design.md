@@ -14,8 +14,8 @@ Different from plan-maker, which reviews documents, and from tools that annotate
 - **Device**: the viewport a state is designed for: a preset (`phone` 390×844, `tablet` 820×1180, `laptop` 1280×800, `desktop` 1440×900) or a custom size. The project has a default; a screen or a state may override it (see "Devices").
 - **Intent**: Claude's *why* for a screen or state (in `board.json`), shown beside the mock. The author's own context goes in **notes** (`notes.json`).
 - **Mark**: something the author drew or pinned on a state, with a note: pin, box, ellipse, arrow, pen (freehand), or a plain note with no drawing.
-- **Ask** (a request): free-form text for Claude, with a **scope**: the **whole app** (every screen), one **flow** (every screen in it), one **screen**, or none (something new: Claude decides where).
-- **Job**: work handed to Claude: one per screen with open marks (and its screen asks), one per unscoped ask, and one per whole-app or flow ask (kind `app` or `flow`, exclusive over the screens it covers). Each job has a **context pack** (`jobs/<id>.md`) a background worker can act on alone.
+- **Ask** (a request): free-form text for Claude, with a **scope**: the **whole app** (every screen), one **flow** (every screen in it), one **screen**, none (something new: Claude decides where), or **export** (the board's Export: write the spec, plus whatever else the text asks for).
+- **Job**: work handed to Claude: one per screen with open marks (and its screen asks), one per unscoped ask, one per whole-app or flow ask (kind `app` or `flow`, exclusive over the screens it covers), and one per export request (kind `export`: it writes the spec into the product repo and covers no screen). Each job has a **context pack** (`jobs/<id>.md`) a background worker can act on alone.
 - **Kit**: `kit/mock.css` (+ optional `kit/mock.js`), the shared look every mock uses, so workers produce consistent screens.
 - **Theme**: the project's `theme.css`, its brand: overrides of the kit's variables, loaded by every mock after the kit. Mocks never hard-code what it provides.
 - **Design direction**: the author's note on the whole app (brand, tone, type, colour), in `notes.json` as `app.note`; every whole-app and flow pack carries it.
@@ -156,7 +156,7 @@ Any screen or state may carry a `device` (same values as `project.json`'s), e.g.
   "asks": [
     {
       "id": "a_…", "text": "make it feel warmer",
-      "scope": "app | flow | screen | null", "flow": "<flow-id when scope is flow>", "screen": "<screen-id when scope is screen>",
+      "scope": "app | flow | screen | export | null", "flow": "<flow-id when scope is flow>", "screen": "<screen-id when scope is screen>",
       "status": "open|sent|done", "job": null, "createdAt": "ISO"
     }
   ]
@@ -176,7 +176,7 @@ Coordinates are CSS pixels in the mock's own coordinate space (the unscaled view
 - `PUT /api/notes` → replace notes.json (the UI saves debounced; the server writes atomically).
 - `POST /api/board` with `{ op, ... }` → serialized board edits (used by `board.mjs` when a server runs, so parallel workers don't clobber each other). Ops: `add-flow`, `add-screen`, `add-state`, `update` (title/intent of a flow, screen or state), `remove-state`, `move`.
 - `POST /api/send` `{ screen?: id }` → turns open marks (all screens, or one) and open asks into jobs: **one job per screen** that has open marks or a screen-scoped ask, and **one job per unscoped ask**. Marks/asks become `sent` with their job id. Returns the jobs.
-- `POST /api/ask` `{ text, scope?: "app"|"flow"|"screen", flow?, screen? }` → adds an ask and sends it at once (404 for an unknown flow or screen). Without a scope: a screen ask if `screen` is given, a flow ask if only `flow`, else a loose ask.
+- `POST /api/ask` `{ text, scope?: "app"|"flow"|"screen"|"export", flow?, screen? }` → adds an ask and sends it at once (404 for an unknown flow or screen). Without a scope: a screen ask if `screen` is given, a flow ask if only `flow`, else a loose ask. `scope: "export"` is the board's Export: an export job.
 - `POST /api/send` leaves open app and flow asks out when it's scoped to one screen.
 - Jobs: `POST /api/jobs/<id>/start`, `/done` `{ summary, files? }`, `/fail` `{ error }`. On done, the job's marks and asks become `done`.
 - `GET /api/claude/events` (SSE, for the listener): `hello` on connect, then queued jobs not yet offered, then each new job as `{ type: "job", ... }`. A connected listener makes `claude.connected` true (with a 60 s grace after it drops).
@@ -186,11 +186,11 @@ Coordinates are CSS pixels in the mock's own coordinate space (the unscaled view
 
 ## Jobs and the context pack
 
-`jobs/<id>.json`: `{ id, kind: "marks"|"ask"|"app"|"flow", scope: "screen"|"app"|"flow"|null, screen, flow, status: queued|offered|running|done|failed, createdAt, startedAt, doneAt, summary, error, marks: [...], asks: [...] }`. An app or flow job has one ask, no marks, `screen: null`.
+`jobs/<id>.json`: `{ id, kind: "marks"|"ask"|"app"|"flow"|"export", scope: "screen"|"app"|"flow"|"export"|null, screen, flow, status: queued|offered|running|done|failed, createdAt, startedAt, doneAt, summary, error, marks: [...], asks: [...] }`. An app or flow job has one ask, no marks, `screen: null`.
 
 ### Exclusivity
 
-A job **covers** screens (`jobCoverage` in `lib/jobs.mjs`): a screen job its screen; a flow job every screen in its flow (as the board is when it's offered); an app job every screen, including ones added while it runs; a loose ask none. The server offers jobs oldest first, and a job is offered only when nothing it covers is covered by an offered or running job. A queued job that can't start still **reserves** what it covers, so later jobs wait behind it: an app job waits until no screen job is running, and screen jobs sent after it wait until it's done. Two flow jobs on different flows, or screen jobs on different screens, run in parallel; loose asks run alongside anything (as before).
+A job **covers** screens (`jobCoverage` in `lib/jobs.mjs`): a screen job its screen; a flow job every screen in its flow (as the board is when it's offered); an app job every screen, including ones added while it runs; a loose ask and an export none (an export reads the board and changes no screen, so it runs alongside everything, and `job.mjs start` snapshots no mocks for it). The server offers jobs oldest first, and a job is offered only when nothing it covers is covered by an offered or running job. A queued job that can't start still **reserves** what it covers, so later jobs wait behind it: an app job waits until no screen job is running, and screen jobs sent after it wait until it's done. Two flow jobs on different flows, or screen jobs on different screens, run in parallel; loose asks run alongside anything (as before).
 
 `jobs/<id>.md` is everything a worker needs, self-contained:
 1. The project (name, goal, path, product repo) and a pointer to `authoring.md` (absolute path) and the kit README.
@@ -210,6 +210,7 @@ The pack of an **app or flow job** instead holds: the request; the author's desi
 - `design-driven-development: the author asked "<text>" …` same shape, for asks.
 - `design-driven-development: whole-app job <id>: the author asked "<text>" (<n> screens, <m> states). This is a whole-app job: it applies to every screen, and no other job touches those screens until it's done. Run … start …, then start a background subagent …, and when it finishes run … done … The pack tells the subagent to change the theme first and, if many mocks need edits, to split them by flow across its own subagents.`
 - `design-driven-development: flow job on "<flow title>" <id>: …` the same for a flow (`This is a flow job: it applies to every screen in "<flow>"`).
+- `design-driven-development: export job <id>: the author asked "<text>". This is an export: it writes the spec (and whatever else the request asks for) into the product repo and changes no screen. Run … start …, then start a background subagent …, and when it finishes run … done …`
 
 `node listen.mjs <project> --state working|ready|idle|error --message "…"` posts to `/api/claude/state`.
 
@@ -217,7 +218,7 @@ The pack of an **app or flow job** instead holds: the request; the author's desi
 
 One page, no framework, no build step.
 
-- **Top bar**: sidebar toggle; project name; Claude pill (connected / working "Updating 2 screens" / offline); **Send to Claude** (count of open marks + asks; disabled at 0); **Ask Claude…** (opens the Whole app panel, scoped to the focused screen in the focus view, else the whole app); **Activity** (jobs: queued, running, done with summary, failed); **Export**, which just shows the sentence to say to Claude ("export the spec").
+- **Top bar**: sidebar toggle; project name; Claude pill (connected / working "Updating 2 screens" / offline); **Send to Claude** (count of open marks + asks; disabled at 0); **Ask Claude…** (opens the Whole app panel, scoped to the focused screen in the focus view, else the whole app); **Activity** (jobs: queued, running, done with summary, failed); **Export**, a popover with a request box prefilled with "export the spec" that the author can extend ("…and break the work into epics and stories"), the folder it writes to, and **Send to Claude** (⌘↵): an `export` ask, so an export job. While only an export runs, the pill says "Exporting the spec".
 - **Sidebar** (left, 268 px, collapsible with the top-bar button or `[`; open/closed kept in localStorage, closed by default under 900 px wide, where it floats over the board): the project name and goal; a **Whole app** item (opens the Whole app panel; says when an app request is waiting or running); a "Find a screen" filter; every flow (foldable, fold state remembered, screen count) with its screens nested, each with its state count, a small device icon for each device its states use other than the project's, an open-marks badge (open marks + open screen asks), and a pulsing dot while a job covers it. Clicking a flow scrolls the board to it; clicking a screen scrolls to it and highlights it briefly. The screen most in view (IntersectionObserver on the board) and its flow are highlighted as you scroll, and kept in view in the sidebar. In the focus view the sidebar stays; clicking a screen (or flow) opens its first state.
 - **Whole app panel** (a drawer on the right): the **design direction** note (`app.note`, autosaved); a **request** box with **Applies to**: Whole app (every screen), one flow, one screen, or "Something new · Claude decides where", with a line on what that scope means; and every request so far with its scope, status (Waiting for Claude / Claude is working / Done / Failed) and the job's summary. Each flow's heading on the board has "Ask about this flow…" (opens the panel scoped to it). Esc closes it.
 - **Board view** (default): flows as sections (title + intent). Each screen is a column group: title, intent, author note; its states side by side as frames (iframes of the mocks at their device's size, scaled with a transform), each with the state title, its device when it isn't the project's ("Phone · 390×844"), and intent under it, and a badge with its open marks count. Each frame fits a box of zoom × 900×844, so a phone shows at the zoom (~0.55) and a desktop smaller, and screens mixing devices stay tidy. The frame's chrome follows the device (see "Devices"). A zoom control (0.35–1). Frames reload when their file changes, with a brief highlight (all of them when theme.css changes); states being worked on show a "Claude is updating" shimmer, on every screen a running app or flow job covers; a waiting screen job shows "Waiting for Claude".
@@ -226,6 +227,7 @@ One page, no framework, no build step.
   - A new mark gets a number and opens its note field at once. Marks list in the right panel: number, note, status; click to highlight; delete.
   - Right panel also: Claude's intent for the screen and the state; the author's note for the screen and for the state; "Send this screen to Claude".
   - Done marks fade and fold into "Resolved (n)".
+  - **Full screen** (**F**, or the button beside the zoom): the top bar, sidebar, tool rail, stage head, strip and panel step aside and the state is fitted to the window (16 px margin; zoom is always Fit). One floating toolbar holds the screen and state, the tools, how much is open to send, **Send to Claude** (this screen) and **Exit**. It docks at the bottom centre; drag it anywhere by its grip (kept in localStorage, inside the window), double-click the grip to dock it. The selected mark's note is a card on the toolbar (under it when the toolbar sits in the top half), so notes are still written off the canvas. Esc deselects, then leaves full screen; arrows still move between states.
 - Autosave to `PUT /api/notes` (debounced 400 ms); everything restores on reload.
 - Works when Claude is offline: marks still save; Send queues jobs until a listener connects.
 

@@ -1,8 +1,10 @@
 // The board app: renders a project's flows, screens and states as live frames sized to each state's
 // device (phone, tablet, desktop or laptop browser window, or a custom size), the focus
-// view where the author draws marks (pin, box, ellipse, arrow, pen, note) over a state, the sidebar
+// view where the author draws marks (pin, box, ellipse, arrow, pen, note) over a state (also full screen,
+// with a floating toolbar the author can drag), the sidebar
 // (every flow and screen, the one in view highlighted), the Whole app panel (design direction and
-// requests for the whole app, a flow or a screen), and the Claude controls (Send, Ask, Activity).
+// requests for the whole app, a flow or a screen), and the Claude controls (Send, Ask, Activity, and
+// Export, which sends an export request).
 // Talks to lib/server.mjs (/api/project, /api/notes,
 // /api/send, /api/ask, SSE /api/stream). With a <script id="ddd-data"> in the page (the exported
 // spec) it runs read-only from that data, with no server. No framework, no build step.
@@ -62,6 +64,8 @@
     zoom: clampZoom(store.get('zoom', 0.55)),
     stageZoom: store.get('stageZoom', 'fit'), // 'fit' or a scale for the focus view
     focus: null, // { screen, state }
+    full: false, // the focus view is full screen: just the state and the floating toolbar
+    fsBar: store.get('fsBar', null), // where the author left the full-screen toolbar ({ x, y }), or null: docked
     tool: 'select',
     hot: null, // selected mark id
     sig: '',
@@ -178,14 +182,14 @@
   }
   const findFlow = (id) => S.board.flows.find((f) => f.id === id) || null;
   const allScreenIds = () => S.board.flows.flatMap((f) => (f.screens || []).map((s) => s.id));
-  /** The screens a job may change (as the server's jobCoverage): every screen, a flow's, one, or none. */
+  /** The screens a job may change (as the server's jobCoverage): every screen, a flow's, one, or none (a loose ask, an export). */
   function jobScreens(j) {
     if (j.kind === 'app') return allScreenIds();
     if (j.kind === 'flow') return (findFlow(j.flow)?.screens || []).map((s) => s.id);
     return j.screen ? [j.screen] : [];
   }
   const isActive = (j) => j.status === 'running' || j.status === 'offered';
-  const scopeOf = (a) => (a.scope === 'app' || a.scope === 'flow' || a.scope === 'screen' ? a.scope : a.screen ? 'screen' : null);
+  const scopeOf = (a) => (['app', 'flow', 'screen', 'export'].includes(a.scope) ? a.scope : a.screen ? 'screen' : null);
   const allStates = () => S.board.flows.flatMap((f) => (f.screens || []).flatMap((s) => (s.states || []).map((st) => ({ flow: f, screen: s, state: st }))));
 
   // ---------- saving notes ----------
@@ -451,6 +455,7 @@
       b.textContent = k;
       b.title = `${k} open mark${k === 1 ? '' : 's'} or request${k === 1 ? '' : 's'}`;
     }
+    paintFs();
     if (READ_ONLY) return;
     const n = totalOpen();
     $('#send-count').textContent = n;
@@ -494,7 +499,9 @@
     const pill = $('#claude-pill');
     const active = S.jobs.filter((j) => j.status === 'running' || j.status === 'offered');
     const waiting = S.jobs.filter((j) => j.status === 'queued').length;
-    const screens = new Set(active.flatMap((j) => (jobScreens(j).length ? jobScreens(j) : [j.id]))).size;
+    // An export changes no screen: it's "Exporting the spec" unless screens are being updated too.
+    const changing = active.filter((j) => j.kind !== 'export');
+    const screens = new Set(changing.flatMap((j) => (jobScreens(j).length ? jobScreens(j) : [j.id]))).size;
     let state = 'offline';
     let text = waiting ? `Claude offline · ${waiting} waiting` : 'Claude offline';
     let title = `No Claude session is listening. In Claude Code, say "connect to the ${S.project?.slug || ''} design" (or run /design-driven-development). What you send waits until then.`;
@@ -502,7 +509,7 @@
       title = 'A Claude Code session is listening and works on what you send.';
       if (active.length) {
         state = 'working';
-        text = `Updating ${screens} screen${screens === 1 ? '' : 's'}`;
+        text = screens ? `Updating ${screens} screen${screens === 1 ? '' : 's'}` : 'Exporting the spec';
       } else if (S.claude.phase === 'error') {
         state = 'error';
         text = S.claude.message || 'Claude hit a problem';
@@ -545,7 +552,7 @@
     for (const j of jobs) {
       const said = `“${(j.asks[0]?.text || '').slice(0, 80)}”`;
       const title =
-        j.kind === 'app' ? `Whole app · ${said}` : j.kind === 'flow' ? `${findFlow(j.flow)?.title || j.flow} · ${said}` : j.screen ? findScreen(j.screen)?.screen.title || j.screen : said;
+        j.kind === 'app' ? `Whole app · ${said}` : j.kind === 'export' ? `Export · ${said}` : j.kind === 'flow' ? `${findFlow(j.flow)?.title || j.flow} · ${said}` : j.screen ? findScreen(j.screen)?.screen.title || j.screen : said;
       const parts = [];
       if (j.marks?.length) parts.push(`${j.marks.length} mark${j.marks.length === 1 ? '' : 's'}`);
       if (j.asks?.length && j.screen) parts.push(`${j.asks.length} ask${j.asks.length === 1 ? '' : 's'}`);
@@ -592,6 +599,7 @@
 
   function closeFocus() {
     if (!S.focus) return;
+    setFull(false);
     flush();
     const { screen } = S.focus;
     S.focus = null;
@@ -631,17 +639,18 @@
     return hit && state ? { ...hit, state } : null;
   };
 
-  /** The scale that fits a device's frame into the stage (never above 1). */
+  /** The scale that fits a device's frame into the stage (never above 1). Full screen leaves a 16px margin. */
   function stageFit(dev) {
     const body = $('#stage-body');
     const ch = chromeHeight(dev, 1, STAGE_CHROME);
-    return Math.max(0.1, Math.min(1, (body.clientHeight - 36 - ch) / dev.height, (body.clientWidth - 36) / dev.width));
+    const pad = S.full ? 32 : 36;
+    return Math.max(0.1, Math.min(1, (body.clientHeight - pad - ch) / dev.height, (body.clientWidth - pad) / dev.width));
   }
 
   /** The focus view's scale: fitted, or the one the author picked (kept across states and visits). */
   function stageZoom(dev) {
     const fit = stageFit(dev);
-    const z = S.stageZoom === 'fit' ? fit : Number(S.stageZoom) || 1;
+    const z = S.full || S.stageZoom === 'fit' ? fit : Number(S.stageZoom) || 1;
     $('#stage-zoom-val').textContent = `${Math.round(z * 100)}%`;
     $('#stage-fit').setAttribute('aria-pressed', String(S.stageZoom === 'fit'));
     $('#stage-100').setAttribute('aria-pressed', String(S.stageZoom !== 'fit' && Math.abs(z - 1) < 0.001));
@@ -733,6 +742,8 @@
     $('#p-screen-intent').textContent = d.screen.intent || '';
     $('#p-state-name').textContent = `· ${d.state.title || d.state.id}`;
     $('#p-state-intent').textContent = d.state.intent || '';
+    $('#fs-title').textContent = `${d.screen.title || d.screen.id} · ${d.state.title || d.state.id}`;
+    $('#fs-title').title = states.length > 1 ? `${states.findIndex((s) => s.id === d.state.id) + 1} of ${states.length} · ← → to move` : '';
   }
 
   function renderStrip() {
@@ -973,7 +984,8 @@
     const li = $(`.mark[data-id="${CSS.escape(id)}"]`);
     if (li?.closest('details')) li.closest('details').open = true;
     li?.scrollIntoView({ block: 'nearest' });
-    if (fromCanvas) li?.querySelector('textarea')?.focus();
+    paintFs();
+    if (fromCanvas) (S.full ? $('#fs-note-text:not([hidden])') : li?.querySelector('textarea'))?.focus();
     else {
       // Bring the mark into view in the mock.
       const m = marksOf(S.focus.screen, S.focus.state).find((x) => x.id === id);
@@ -1024,7 +1036,7 @@
     save();
     setTool('select');
     renderMarks();
-    const t = $(`.mark[data-id="${CSS.escape(m.id)}"] textarea`);
+    const t = S.full ? $('#fs-note-text') : $(`.mark[data-id="${CSS.escape(m.id)}"] textarea`);
     t?.focus();
     t?.scrollIntoView({ block: 'nearest' });
     return m;
@@ -1037,14 +1049,132 @@
       return;
     }
     S.tool = tool;
-    $$('#rail button[data-tool]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.tool === tool)));
+    $$('#rail button[data-tool], #fs-tools button[data-tool]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.tool === tool)));
     stage?.overlay.classList.toggle('drawing', tool !== 'select');
     $('#tool-hint').textContent = READ_ONLY ? '' : HINTS[tool] || '';
+  }
+
+  // ---------- full screen ----------
+
+  /** Full screen: just the state, fitted to the window, and the floating toolbar (F, or the button by the zoom). */
+  function setFull(on) {
+    on = !!on && !!S.focus;
+    if (on === S.full) return;
+    S.full = on;
+    document.body.classList.toggle('fullscreen', on);
+    $('#fs-bar').hidden = !on;
+    $('#stage-full').setAttribute('aria-pressed', String(on));
+    if (on) {
+      closePops(null);
+      closeApp();
+      placeFsBar();
+    }
+    paintFs();
+    resizeStage();
+  }
+
+  /** The toolbar's title, count, Send, and the selected mark's note card. */
+  function paintFs() {
+    if (!S.full || !S.focus) return;
+    const { screen, state } = S.focus;
+    const open = screenOpenCount(screen);
+    $('#fs-count').textContent = open ? `${open} to send` : 'Nothing to send';
+    $('#fs-send').disabled = !open;
+    $('#fs-send').textContent = open ? `Send to Claude (${open})` : 'Send to Claude';
+    const m = S.hot ? marksOf(screen, state).find((x) => x.id === S.hot) : null;
+    const card = $('#fs-note');
+    card.hidden = !m;
+    if (!m) return;
+    const status = m.status || 'open';
+    card.className = `fs-note ${status}`;
+    $('#fs-note-n').textContent = m.n;
+    $('#fs-note-head').textContent = [SHAPES[m.shape] || 'Mark', { open: 'Open', sent: 'With Claude', done: 'Done' }[status], m.target?.text ? `“${m.target.text}”` : ''].filter(Boolean).join(' · ');
+    const t = $('#fs-note-text');
+    const editable = !READ_ONLY && status === 'open';
+    t.hidden = !editable;
+    $('#fs-note-read').hidden = editable;
+    $('#fs-note-read').textContent = m.text || '(no note)';
+    if (editable && (t.dataset.id !== m.id || document.activeElement !== t)) t.value = m.text || '';
+    t.dataset.id = m.id;
+    autosize(t);
+  }
+
+  /** Put the toolbar where the author left it (kept inside the window), or docked at the bottom centre. */
+  function placeFsBar() {
+    const bar = $('#fs-bar');
+    if (!S.fsBar) {
+      bar.classList.remove('moved', 'below');
+      bar.style.left = bar.style.top = '';
+      return;
+    }
+    const r = bar.getBoundingClientRect();
+    const x = Math.max(8, Math.min(innerWidth - r.width - 8, S.fsBar.x));
+    const y = Math.max(8, Math.min(innerHeight - r.height - 8, S.fsBar.y));
+    bar.classList.add('moved');
+    bar.classList.toggle('below', y + r.height / 2 < innerHeight / 2); // in the top half, the note card opens under the toolbar
+    bar.style.left = `${x}px`;
+    bar.style.top = `${y}px`;
+  }
+
+  function wireFullscreen() {
+    // The toolbar's tools are the rail's, so they share keys, titles and pressed state.
+    for (const b of $$('#rail button[data-tool]')) {
+      const c = b.cloneNode(true);
+      c.addEventListener('click', () => setTool(S.tool === c.dataset.tool && c.dataset.tool !== 'select' ? 'select' : c.dataset.tool));
+      $('#fs-tools').append(c);
+    }
+    $('#stage-full').addEventListener('click', () => setFull(!S.full));
+    $('#fs-exit').addEventListener('click', () => setFull(false));
+    $('#fs-send').addEventListener('click', () => S.focus && sendToClaude(S.focus.screen));
+    $('#fs-note-text').addEventListener('input', (e) => {
+      const t = e.target;
+      const m = S.focus && marksOf(S.focus.screen, S.focus.state).find((x) => x.id === t.dataset.id);
+      if (!m) return;
+      m.text = t.value;
+      autosize(t);
+      save();
+      const li = $(`#marks .mark[data-id="${CSS.escape(m.id)}"] textarea`);
+      if (li) li.value = m.text;
+      const title = stage?.marksG.querySelector(`[data-id="${CSS.escape(m.id)}"] title`);
+      if (title) title.textContent = `${m.n}. ${m.text || SHAPES[m.shape]}`;
+    });
+    // Drag by the grip; double-click docks it back.
+    const bar = $('#fs-bar');
+    const grip = $('#fs-grip');
+    let drag = null;
+    grip.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
+      const r = bar.getBoundingClientRect();
+      drag = { dx: e.clientX - r.left, dy: e.clientY - r.top };
+      grip.setPointerCapture(e.pointerId);
+      bar.classList.add('dragging');
+      e.preventDefault();
+    });
+    grip.addEventListener('pointermove', (e) => {
+      if (!drag) return;
+      S.fsBar = { x: e.clientX - drag.dx, y: e.clientY - drag.dy };
+      placeFsBar();
+    });
+    const drop = () => {
+      if (!drag) return;
+      drag = null;
+      bar.classList.remove('dragging');
+      store.set('fsBar', S.fsBar);
+    };
+    grip.addEventListener('pointerup', drop);
+    grip.addEventListener('pointercancel', drop);
+    grip.addEventListener('dblclick', () => {
+      S.fsBar = null;
+      store.set('fsBar', null);
+      placeFsBar();
+    });
+    addEventListener('resize', () => S.full && placeFsBar());
   }
 
   function wireDrawing(overlay, s) {
     let start = null;
     let pts = null;
+    let drew = false; // the click that ends a drag isn't a click on the empty canvas: keep the new mark selected
     const toDoc = (e) => {
       const r = s.getBoundingClientRect();
       const z = r.width / stage.dev.width;
@@ -1089,6 +1219,7 @@
       const a = start;
       const b = toDoc(e);
       start = null;
+      drew = true;
       stage.previewG.textContent = '';
       if (S.tool === 'pin') return addMark({ shape: 'pin', x: a[0], y: a[1] });
       const size = S.tool === 'pen' ? Math.max(bbox(pts).w, bbox(pts).h) : Math.hypot(b[0] - a[0], b[1] - a[1]);
@@ -1102,8 +1233,10 @@
       stage.previewG.textContent = '';
     });
     s.addEventListener('click', (e) => {
+      if (drew) return void (drew = false);
       if (S.tool === 'select' && !e.target.closest('.mk')) selectMark(null, false);
     });
+    s.addEventListener('pointerdown', () => (drew = false), true);
   }
 
   // ---------- live updates ----------
@@ -1425,6 +1558,7 @@
   function scopeLabel(a) {
     const sc = scopeOf(a);
     if (sc === 'app') return 'Whole app';
+    if (sc === 'export') return 'Export';
     if (sc === 'flow') return `${findFlow(a.flow)?.title || a.flow} flow`;
     if (sc === 'screen') return findScreen(a.screen)?.screen.title || a.screen;
     return 'Anywhere';
@@ -1474,6 +1608,32 @@
       paintWorking();
       paintCounts();
       toast(r.connected ? 'Sent to Claude.' : 'Queued. Claude picks it up when it connects.');
+    } catch (err) {
+      toast(`Couldn’t send: ${err.message}`);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  const EXPORT_TEXT = 'export the spec';
+
+  /** Export is a request like Ask: it becomes an export job, and Claude writes the spec into the product repo. */
+  async function sendExport(e) {
+    e.preventDefault();
+    const text = $('#export-text').value.trim();
+    if (!text) return;
+    const btn = $('#export-send');
+    btn.disabled = true;
+    try {
+      await flush();
+      const r = await api('POST', 'api/ask', { text, scope: 'export' });
+      if (!S.notes.asks.some((a) => a.id === r.ask.id)) S.notes.asks.push({ ...r.ask, status: 'sent', job: r.jobs[0]?.id || null });
+      S.jobs = [...S.jobs.filter((j) => !r.jobs.some((x) => x.id === j.id)), ...r.jobs];
+      $('#export-text').value = EXPORT_TEXT;
+      closePops(null);
+      renderAsks();
+      paintClaude();
+      toast(r.connected ? 'Sent to Claude: it’s writing the spec.' : 'Queued. Claude writes the spec when it connects.');
     } catch (err) {
       toast(`Couldn’t send: ${err.message}`);
     } finally {
@@ -1535,17 +1695,18 @@
     $('#activity-btn').addEventListener('click', () => togglePop('#activity-btn', '#activity', renderActivity));
     $('#export-btn').addEventListener('click', () =>
       togglePop('#export-btn', '#export-pop', () => {
-        $('#export-dest').textContent = S.project?.repo ? `It goes to ${S.project.repo}/docs/design/${S.project.slug}/` : '';
+        $('#export-dest').textContent = S.project?.repo ? `Writes to ${S.project.repo}/docs/design/${S.project.slug}/` : '';
+        const t = $('#export-text');
+        if (!t.value.trim()) t.value = EXPORT_TEXT;
+        t.focus();
+        t.setSelectionRange(t.value.length, t.value.length);
       }),
     );
-    $('#export-copy').addEventListener('click', async () => {
-      try {
-        await navigator.clipboard.writeText($('#export-say').textContent);
-        toast('Copied. Paste it into Claude Code.');
-      } catch {
-        toast('Say “export the spec” to Claude.');
-      }
+    $('#export-form').addEventListener('submit', sendExport);
+    $('#export-text').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) sendExport(e);
     });
+    wireFullscreen();
     document.addEventListener('click', (e) => {
       if (!e.target.closest('.pop-wrap')) closePops(null);
     });
@@ -1616,6 +1777,7 @@
       if (appOpen()) return closeApp();
       if (S.focus && S.tool !== 'select') return setTool('select');
       if (S.focus && S.hot) return selectMark(null, false);
+      if (S.full) return setFull(false);
       if (S.focus) return closeFocus();
       return;
     }
@@ -1629,6 +1791,10 @@
       if (!READ_ONLY && TOOL_KEYS[k]) {
         e.preventDefault();
         return setTool(TOOL_KEYS[k]);
+      }
+      if (k === 'f') {
+        e.preventDefault();
+        return setFull(!S.full);
       }
       if (k === '-' || k === '_') return setStageZoom('out');
       if (k === '=' || k === '+') return setStageZoom('in');
