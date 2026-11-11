@@ -154,7 +154,8 @@
   const boardScale = (d) => S.zoom * Math.min(1, BOX_W / d.width, BOX_H / d.height);
   const thumbScale = (d) => Math.min(THUMB_W / d.width, THUMB_H / d.height);
   /** The browser window's title bar height at scale z (desktop and laptop frames); 0 for other frames. */
-  const chromeHeight = (d, z, fixed) => (d.kind !== 'browser' ? 0 : fixed || Math.round(Math.max(8, Math.min(30, 40 * z))));
+  // fixed: the title bar's height whatever the scale (the focus view), or -1 for none (full screen: the state is the window).
+  const chromeHeight = (d, z, fixed) => (d.kind !== 'browser' || fixed < 0 ? 0 : fixed || Math.round(Math.max(8, Math.min(30, 40 * z))));
 
   const screenNotes = (screen) => S.notes.screens[screen] || null;
   const stateNotes = (screen, state) => S.notes.screens[screen]?.states?.[state] || null;
@@ -260,7 +261,7 @@
   function frame(screen, state, z, { interactive = false, register = true, chrome = 0 } = {}) {
     const dev = deviceOf(screen.id, state.id);
     const p = el('div', { class: `frame k-${dev.kind}`, 'data-screen': screen.id, 'data-state': state.id, 'data-device': dev.name });
-    if (dev.kind === 'browser') {
+    if (dev.kind === 'browser' && chrome >= 0) {
       p.append(
         el(
           'div',
@@ -639,12 +640,15 @@
     return hit && state ? { ...hit, state } : null;
   };
 
-  /** The scale that fits a device's frame into the stage (never above 1). Full screen leaves a 16px margin. */
+  /**
+   * The scale that fits a device's frame into the stage: never above 1 in the focus view; in full screen the
+   * state fills the window edge to edge (no browser title bar, no margin), scaled up on a bigger screen.
+   */
   function stageFit(dev) {
     const body = $('#stage-body');
+    if (S.full) return Math.max(0.1, Math.min(4, body.clientHeight / dev.height, body.clientWidth / dev.width));
     const ch = chromeHeight(dev, 1, STAGE_CHROME);
-    const pad = S.full ? 32 : 36;
-    return Math.max(0.1, Math.min(1, (body.clientHeight - pad - ch) / dev.height, (body.clientWidth - pad) / dev.width));
+    return Math.max(0.1, Math.min(1, (body.clientHeight - 36 - ch) / dev.height, (body.clientWidth - 36) / dev.width));
   }
 
   /** The focus view's scale: fitted, or the one the author picked (kept across states and visits). */
@@ -678,7 +682,7 @@
     holder.textContent = '';
     const dev = deviceOf(d.screen.id, d.state.id);
     const z = stageZoom(dev);
-    const fr = frame(d.screen, d.state, z, { interactive: true, chrome: dev.kind === 'browser' ? STAGE_CHROME : 0 });
+    const fr = frame(d.screen, d.state, z, { interactive: true, chrome: S.full ? -1 : dev.kind === 'browser' ? STAGE_CHROME : 0 });
     fr.el.querySelector('.badge')?.remove();
     // The marks layer: an SVG in the mock's own CSS pixels (its device's size), scaled with the iframe, shifted by its scroll.
     const { width: W, height: H } = dev;
@@ -1069,8 +1073,13 @@
       closeApp();
       placeFsBar();
     }
+    // The browser's own full screen too, so its tabs and address bar go away. If it refuses (no user
+    // gesture, or not allowed), the board's full screen still works inside the window.
+    const root = document.documentElement;
+    if (on && !document.fullscreenElement && root.requestFullscreen) root.requestFullscreen({ navigationUI: 'hide' }).catch(() => {});
+    if (!on && document.fullscreenElement) document.exitFullscreen().catch(() => {});
     paintFs();
-    resizeStage();
+    renderStage(); // the frame loses (or gets back) its browser title bar
   }
 
   /** The toolbar's title, count, Send, and the selected mark's note card. */
@@ -1169,6 +1178,10 @@
       placeFsBar();
     });
     addEventListener('resize', () => S.full && placeFsBar());
+    // Esc in the browser's full screen is the browser's: it leaves full screen, so the board does too.
+    document.addEventListener('fullscreenchange', () => {
+      if (!document.fullscreenElement && S.full) setFull(false);
+    });
   }
 
   function wireDrawing(overlay, s) {
