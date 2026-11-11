@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **Full screen:** a mark's note card no longer stays open. It folds into the toolbar when you're done (Enter, its ×, or clicking elsewhere), and the toolbar's note button, with the count of marks on the state, shows it again.
+
 ## 0.4.0 (2026-11-10): full screen, export from the board
 
 - **Full screen in the focus view.** **F** (or the button beside the zoom) hides the top bar, sidebar, tool rail, strip and panel and fits the state to the window, which matters most for desktop states. A floating vertical toolbar, docked on the left, keeps marking up possible: the tools, Send to Claude with the count to send, and Exit. Drag it anywhere by its grip (it remembers where), double-click to dock it; the selected mark's note opens as a card beside it.

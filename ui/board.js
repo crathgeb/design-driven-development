@@ -65,7 +65,8 @@
     stageZoom: store.get('stageZoom', 'fit'), // 'fit' or a scale for the focus view
     focus: null, // { screen, state }
     full: false, // the focus view is full screen: just the state and the floating toolbar
-    fsBar: store.get('fsBarV', null), // where the author left the full-screen toolbar ({ x, y }), or null: docked
+    fsBar: store.get('fsBarV', null),
+    fsNote: false, // full screen: the selected mark's note card is open (else it's folded into the toolbar) // where the author left the full-screen toolbar ({ x, y }), or null: docked
     tool: 'select',
     hot: null, // selected mark id
     sig: '',
@@ -986,6 +987,7 @@
     const li = $(`.mark[data-id="${CSS.escape(id)}"]`);
     if (li?.closest('details')) li.closest('details').open = true;
     li?.scrollIntoView({ block: 'nearest' });
+    if (S.full) S.fsNote = !!id && (fromCanvas || S.fsNote);
     paintFs();
     if (fromCanvas) (S.full ? $('#fs-note-text:not([hidden])') : li?.querySelector('textarea'))?.focus();
     else {
@@ -1035,6 +1037,7 @@
     }
     st.marks.push(m);
     S.hot = m.id;
+    if (S.full) S.fsNote = true; // write its note now; it folds away when done
     save();
     setTool('select');
     renderMarks();
@@ -1084,10 +1087,16 @@
     $('#fs-count').hidden = !open;
     $('#fs-send').disabled = !open;
     $('#fs-send').title = open ? `Send this screen to Claude (${open})` : 'Nothing to send on this screen';
-    const m = S.hot ? marksOf(screen, state).find((x) => x.id === S.hot) : null;
+    const marks = marksOf(screen, state);
+    const m = S.hot ? marks.find((x) => x.id === S.hot) : null;
+    $('#fs-marks').textContent = marks.length;
+    $('#fs-marks').hidden = !marks.length;
+    $('#fs-notes').disabled = !marks.length;
+    $('#fs-notes').title = !marks.length ? 'No marks on this state yet' : S.fsNote && m ? 'Fold the note away' : `Show ${m ? `mark ${m.n}'s note` : 'the latest note'} (${plural(marks.length, 'mark')} on this state)`;
+    $('#fs-notes').setAttribute('aria-pressed', String(!!(S.fsNote && m)));
     const card = $('#fs-note');
-    card.hidden = !m;
-    if (!m) return;
+    card.hidden = !(m && S.fsNote);
+    if (card.hidden) return;
     const status = m.status || 'open';
     card.className = `fs-note ${status}`;
     $('#fs-note-n').textContent = m.n;
@@ -1119,6 +1128,20 @@
     bar.style.top = `${y}px`;
   }
 
+  /** Open the note card for a mark (the selected one, else the latest), or fold it back into the toolbar. */
+  function showFsNote(on) {
+    if (!S.focus) return;
+    if (on && !S.hot) {
+      const marks = marksOf(S.focus.screen, S.focus.state);
+      const last = [...marks].reverse().find((m) => m.status !== 'done') || marks[marks.length - 1];
+      if (!last) return;
+      return selectMark(last.id, true);
+    }
+    S.fsNote = !!on;
+    paintFs();
+    if (on) $('#fs-note-text:not([hidden])')?.focus();
+  }
+
   function wireFullscreen() {
     // The toolbar's tools are the rail's, so they share keys, titles and pressed state.
     for (const b of $$('#rail button[data-tool]')) {
@@ -1129,6 +1152,19 @@
     $('#stage-full').addEventListener('click', () => setFull(!S.full));
     $('#fs-exit').addEventListener('click', () => setFull(false));
     $('#fs-send').addEventListener('click', () => S.focus && sendToClaude(S.focus.screen));
+    $('#fs-notes').addEventListener('pointerdown', (e) => e.preventDefault()); // keep focus in the note, so the click toggles it
+    $('#fs-notes').addEventListener('click', () => showFsNote(!(S.fsNote && S.hot)));
+    $('#fs-note-close').addEventListener('click', () => showFsNote(false));
+    // Done writing: Enter (Shift+Enter is a new line), or focus leaving the card, folds it into the toolbar.
+    $('#fs-note-text').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+        e.preventDefault();
+        e.target.blur();
+      }
+    });
+    $('#fs-note').addEventListener('focusout', (e) => {
+      if (!e.relatedTarget || !$('#fs-note').contains(e.relatedTarget)) setTimeout(() => !$('#fs-note').contains(document.activeElement) && showFsNote(false), 0);
+    });
     $('#fs-note-text').addEventListener('input', (e) => {
       const t = e.target;
       const m = S.focus && marksOf(S.focus.screen, S.focus.state).find((x) => x.id === t.dataset.id);
