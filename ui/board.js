@@ -20,7 +20,7 @@
   const BOX_H = 844;
   const THUMB_W = 240;
   const THUMB_H = 169;
-  const STAGE_STEPS = [0.25, 0.33, 0.5, 0.67, 0.75, 0.9, 1, 1.25, 1.5, 2];
+  const STAGE_STEPS = [0.25, 0.33, 0.5, 0.67, 0.75, 0.9, 1, 1.25, 1.5, 2, 3, 4];
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const DATA = document.getElementById('ddd-data');
@@ -641,8 +641,9 @@
   };
 
   /**
-   * The scale that fits a device's frame into the stage: never above 1 in the focus view; in full screen the
-   * state fills the window edge to edge (no browser title bar, no margin), scaled up on a bigger screen.
+   * The scale that fits a device's frame into the stage (Fit): never above 1 in the focus view; in full screen
+   * the state fills the window edge to edge (no browser title bar, no margin), scaled up on a bigger screen.
+   * The zoom (−, +, 100%) works in both; a frame bigger than the room scrolls.
    */
   function stageFit(dev) {
     const body = $('#stage-body');
@@ -654,10 +655,11 @@
   /** The focus view's scale: fitted, or the one the author picked (kept across states and visits). */
   function stageZoom(dev) {
     const fit = stageFit(dev);
-    const z = S.full || S.stageZoom === 'fit' ? fit : Number(S.stageZoom) || 1;
-    $('#stage-zoom-val').textContent = `${Math.round(z * 100)}%`;
-    $('#stage-fit').setAttribute('aria-pressed', String(S.stageZoom === 'fit'));
-    $('#stage-100').setAttribute('aria-pressed', String(S.stageZoom !== 'fit' && Math.abs(z - 1) < 0.001));
+    const z = S.stageZoom === 'fit' ? fit : Number(S.stageZoom) || 1;
+    // The same zoom in the stage head and on the full-screen toolbar.
+    $('#stage-zoom-val').textContent = $('#fs-zoom-val').textContent = `${Math.round(z * 100)}%`;
+    for (const b of ['#stage-fit', '#fs-fit']) $(b).setAttribute('aria-pressed', String(S.stageZoom === 'fit'));
+    for (const b of ['#stage-100', '#fs-100']) $(b).setAttribute('aria-pressed', String(S.stageZoom !== 'fit' && Math.abs(z - 1) < 0.001));
     $('#stage-device').textContent = deviceText(dev);
     $('#stage-device').title = sameDevice(dev, defaultDevice()) ? 'The project’s device' : `This state is designed for another device than the project’s (${deviceText(defaultDevice())})`;
     return z;
@@ -667,8 +669,8 @@
     if (!stage) return;
     const cur = stage.z;
     let next = v;
-    if (v === 'in') next = STAGE_STEPS.find((x) => x > cur + 0.001) ?? STAGE_STEPS[STAGE_STEPS.length - 1];
-    else if (v === 'out') next = [...STAGE_STEPS].reverse().find((x) => x < cur - 0.001) ?? STAGE_STEPS[0];
+    if (v === 'in') next = STAGE_STEPS.find((x) => x > cur + 0.001) ?? cur;
+    else if (v === 'out') next = [...STAGE_STEPS].reverse().find((x) => x < cur - 0.001) ?? cur;
     S.stageZoom = next;
     store.set('stageZoom', next);
     resizeStage();
@@ -1134,6 +1136,10 @@
     }
     $('#stage-full').addEventListener('click', () => setFull(!S.full));
     $('#fs-exit').addEventListener('click', () => setFull(false));
+    $('#fs-fit').addEventListener('click', () => setStageZoom('fit'));
+    $('#fs-100').addEventListener('click', () => setStageZoom(1));
+    $('#fs-in').addEventListener('click', () => setStageZoom('in'));
+    $('#fs-out').addEventListener('click', () => setStageZoom('out'));
     $('#fs-send').addEventListener('click', () => S.focus && sendToClaude(S.focus.screen));
     $('#fs-note-text').addEventListener('input', (e) => {
       const t = e.target;
