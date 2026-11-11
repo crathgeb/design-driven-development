@@ -956,7 +956,8 @@
         ? el('button', { class: 'icon-btn del', type: 'button', title: 'Delete this mark', 'aria-label': 'Delete this mark' })
         : el('span');
     if (del.tagName === 'BUTTON') {
-      del.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg>';
+      // A trash can, not an ×: × closes things (the full-screen marks panel has one).
+      del.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8.5h5.8l.6-8.5M7 7v3.5M9 7v3.5"/></svg>';
       del.addEventListener('click', (e) => {
         e.stopPropagation();
         deleteMark(m.id);

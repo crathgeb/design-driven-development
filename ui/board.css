@@ -347,6 +347,7 @@ textarea[readonly] { background: var(--surface-2); border-color: var(--line); re
 .mark .m-target { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mark textarea { grid-column: 2 / 4; min-height: 34px; resize: none; overflow: hidden; }
 .mark .del { width: 24px; height: 24px; }
+.mark .del:hover { color: var(--mark); background: var(--mark-soft); }
 .chip { font-size: 11px; font-weight: 650; padding: 1px 7px; border-radius: 9px; }
 .chip.open { color: var(--mark); background: var(--mark-soft); }
 .chip.sent { color: var(--sent); background: var(--sent-soft); }
